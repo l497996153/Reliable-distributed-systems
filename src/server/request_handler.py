@@ -20,6 +20,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    # Handle GET
     def do_GET(self):
         if self.path == "/get":
             value = self.state_manager.get()
@@ -30,6 +31,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"error": "not found"})
 
+    # Handle POST
     def do_POST(self):
         if self.path == "/increase":
             value = self.state_manager.increase()
