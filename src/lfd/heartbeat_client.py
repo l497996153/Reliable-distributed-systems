@@ -27,7 +27,7 @@ def lfd1(host, port, heartbeat_freq, timeout):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LFD1 Heartbeat Client")
-    parser.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     parser.add_argument("--freq", type=float, default=5.0, help="Heartbeat frequency in seconds")
     parser.add_argument("--timeout", type=float, default=10.0, help="Heartbeat timeout in seconds")
