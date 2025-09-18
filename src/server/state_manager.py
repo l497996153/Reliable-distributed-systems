@@ -43,19 +43,19 @@ class StateManager:
     def increase(self) -> int:
         with self._lock:
             before = self._value
-            print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {before} before processing <request: increase>\033[0m")
+            # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {before} before processing <request: increase>\033[0m")
             self._value += 1
             after = self._value
-            print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: increase>\033[0m")
+            # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: increase>\033[0m")
             self._persist()
             return self._value
 
     def decrease(self) -> int:
         with self._lock:
             before = self._value
-            print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {before} before processing <request: decrease>\033[0m")
+            # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {before} before processing <request: decrease>\033[0m")
             self._value -= 1
             after = self._value
-            print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: decrease>\033[0m")
+            # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: decrease>\033[0m")
             self._persist()
             return self._value

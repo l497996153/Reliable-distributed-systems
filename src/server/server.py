@@ -2,6 +2,7 @@ import argparse
 from http.server import HTTPServer
 from request_handler import CounterRequestHandler
 from state_manager import StateManager
+import time
 
 class SingleThreadedHTTPServer(HTTPServer):
     allow_reuse_address = True
@@ -22,12 +23,12 @@ def main():
 
     # Start listening
     server = SingleThreadedHTTPServer((args.host, args.port), CounterRequestHandler)
-    print(f"\033[94m[server] Listening on http://{args.host}:{args.port} as {args.replica_id}\033[0m")
-    print(f"\033[94m[server] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat\033[0m")
+    print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Listening on http://{args.host}:{args.port} as {args.replica_id}\033[0m")
+    print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat\033[0m")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n\033[91m[server] has died...\033[0m")
+        print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] server has died...\033[0m")
     finally:
         server.server_close()
 
