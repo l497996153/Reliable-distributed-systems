@@ -10,7 +10,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         # Prepend timestamp as suggested in the guide
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{ts}] {self.address_string()} - {fmt % args}")
+        print(f"\033[1;96m[{ts}] {self.address_string()} - {fmt % args}\033[0m")
 
     def _send_json(self, code: int, payload: dict):
         data = json.dumps(payload).encode("utf-8")
