@@ -9,7 +9,7 @@ class Client:
         self.connection = None
         self.request_num = 1
         self.start_time = time.strftime("%Y%m%d_%H:%M:%S")
-        self.log_file = f"logs/client_{self.client_id}_log_{self.start_time}.txt"
+        self.log_file = f"../../logs/client_{self.client_id}_log_{self.start_time}.txt"
 
     def log(self, text):
         print(text)
