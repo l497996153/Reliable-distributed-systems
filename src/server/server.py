@@ -22,12 +22,12 @@ def main():
 
     # Start listening
     server = SingleThreadedHTTPServer((args.host, args.port), CounterRequestHandler)
-    print(f"[server] Listening on http://{args.host}:{args.port} as {args.replica_id}")
-    print(f"[server] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat")
+    print(f"\033[94m[server] Listening on http://{args.host}:{args.port} as {args.replica_id}\033[0m")
+    print(f"\033[94m[server] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat\033[0m")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n[server] Shutting down...")
+        print("\n\033[91m[server] has died...\033[0m")
     finally:
         server.server_close()
 
