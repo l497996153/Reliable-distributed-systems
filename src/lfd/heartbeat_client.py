@@ -16,6 +16,7 @@ def lfd1(host, port, heartbeat_freq, timeout):
                 print(f"[LFD1] Heartbeat acknowledged by {r.json().get('replica_id')} at {time.ctime()}")
             else:
                 print(f"[LFD1 WARN] Unexpected heartbeat response: {r.text}")
+
         except requests.exceptions.RequestException:
             if time.time() - last_response_time > timeout:
                 print(f"[LFD1 ERROR] Heartbeat failed! Server {server_url} not responding.")

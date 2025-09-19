@@ -1,0 +1,11 @@
+[2025-09-19 13:42:05] C1: Connected to server localhost:8080
+[2025-09-19 13:42:11] Sent <C1, S1, request id: 1, get>
+[2025-09-19 13:42:11] Received: <C1, S1, 0, reply>
+[2025-09-19 13:42:17] Sent <C1, S1, request id: 2, increase>
+[2025-09-19 13:42:17] Received: <C1, S1, 1, reply>
+[2025-09-19 13:42:19] Sent <C1, S1, request id: 3, decrease>
+[2025-09-19 13:42:19] Received: <C1, S1, 0, reply>
+[2025-09-19 13:42:22] Sent <C1, S1, request id: 4, increase>
+[2025-09-19 13:42:22] Received: <C1, S1, 1, reply>
+[2025-09-19 13:42:25] Sent <C1, S1, request id: 5, decrease>
+[2025-09-19 13:42:25] Received: <C1, S1, 0, reply>

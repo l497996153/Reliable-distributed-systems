@@ -1,0 +1,32 @@
+[2025-09-19 13:42:11] 127.0.0.1 - Received <C1, S1, request id: 1, get>
+[2025-09-19 13:42:11] 127.0.0.1 - state_S1 = 0 before processing <C1, S1, request id: 1, get>
+[2025-09-19 13:42:11] 127.0.0.1 - state_S1 = 0 after processing <C1, S1, request id: 1, get>
+[2025-09-19 13:42:11] 127.0.0.1 - Sending <C1, S1, request id: 1, reply>
+[2025-09-19 13:42:17] 127.0.0.1 - Received <C1, S1, request id: 2, increase>
+[2025-09-19 13:42:17] 127.0.0.1 - state_S1 = 0 before processing <C1, S1, request id: 2, increase>
+[2025-09-19 13:42:17] 127.0.0.1 - state_S1 = 1 after processing <C1, S1, request id: 2, increase>
+[2025-09-19 13:42:17] 127.0.0.1 - Sending <C1, S1, request id: 2, reply>
+[2025-09-19 13:42:19] 127.0.0.1 - Received <C1, S1, request id: 3, decrease>
+[2025-09-19 13:42:19] 127.0.0.1 - state_S1 = 1 before processing <C1, S1, request id: 3, decrease>
+[2025-09-19 13:42:19] 127.0.0.1 - state_S1 = 0 after processing <C1, S1, request id: 3, decrease>
+[2025-09-19 13:42:19] 127.0.0.1 - Sending <C1, S1, request id: 3, reply>
+[2025-09-19 13:42:22] 127.0.0.1 - Received <C1, S1, request id: 4, increase>
+[2025-09-19 13:42:22] 127.0.0.1 - state_S1 = 0 before processing <C1, S1, request id: 4, increase>
+[2025-09-19 13:42:22] 127.0.0.1 - state_S1 = 1 after processing <C1, S1, request id: 4, increase>
+[2025-09-19 13:42:22] 127.0.0.1 - Sending <C1, S1, request id: 4, reply>
+[2025-09-19 13:42:25] 127.0.0.1 - Received <C1, S1, request id: 5, decrease>
+[2025-09-19 13:42:25] 127.0.0.1 - state_S1 = 1 before processing <C1, S1, request id: 5, decrease>
+[2025-09-19 13:42:25] 127.0.0.1 - state_S1 = 0 after processing <C1, S1, request id: 5, decrease>
+[2025-09-19 13:42:25] 127.0.0.1 - Sending <C1, S1, request id: 5, reply>
+[2025-09-19 13:46:47] 127.0.0.1 - Received <C3, S1, request id: 1, get>
+[2025-09-19 13:46:47] 127.0.0.1 - state_S1 = 0 before processing <C3, S1, request id: 1, get>
+[2025-09-19 13:46:47] 127.0.0.1 - state_S1 = 0 after processing <C3, S1, request id: 1, get>
+[2025-09-19 13:46:47] 127.0.0.1 - Sending <C3, S1, request id: 1, reply>
+[2025-09-19 13:46:48] 127.0.0.1 - Received <C3, S1, request id: 2, increase>
+[2025-09-19 13:46:48] 127.0.0.1 - state_S1 = 0 before processing <C3, S1, request id: 2, increase>
+[2025-09-19 13:46:48] 127.0.0.1 - state_S1 = 1 after processing <C3, S1, request id: 2, increase>
+[2025-09-19 13:46:48] 127.0.0.1 - Sending <C3, S1, request id: 2, reply>
+[2025-09-19 13:46:50] 127.0.0.1 - Received <C3, S1, request id: 3, decrease>
+[2025-09-19 13:46:50] 127.0.0.1 - state_S1 = 1 before processing <C3, S1, request id: 3, decrease>
+[2025-09-19 13:46:50] 127.0.0.1 - state_S1 = 0 after processing <C3, S1, request id: 3, decrease>
+[2025-09-19 13:46:50] 127.0.0.1 - Sending <C3, S1, request id: 3, reply>

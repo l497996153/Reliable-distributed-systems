@@ -1,6 +1,7 @@
 from http.client import HTTPConnection
 import json
 import time
+import os
 
 class Client:
     def __init__(self, client_id, server_address):
@@ -9,7 +10,9 @@ class Client:
         self.connection = None
         self.request_num = 1
         self.start_time = time.strftime("%Y%m%d_%H:%M:%S")
-        self.log_file = f"../../logs/client_{self.client_id}_log_{self.start_time}.txt"
+        #self.log_file = f"../../logs/client_{self.client_id}_log_{self.start_time}.txt"
+        self.log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"server_{self.client_id}_log_{self.start_time}.txt")
+
 
     def log(self, text):
         print(text)
@@ -98,8 +101,11 @@ class Client:
 
 # Example usage
 if __name__ == "__main__":
-    client = Client("C1", "localhost:8080")
+
+    client_id = input("Input Client ID: ")
+    client = Client(client_id, "localhost:8080")
     client.connect_to_server()
+    """
     actions = ["get", "increase", "increase", "get", "decrease", "get"]
     for action in actions:
         # print(f"\n--- Sending {action} request ---")
@@ -111,3 +117,25 @@ if __name__ == "__main__":
         # if reply:
             # print(f"Server reply: {reply}")
         time.sleep(3)
+    """
+    try:
+
+        while True:
+
+            action_input = input("Enter the action (get, increase, decrease, or close): ")
+            reply = None
+
+            if action_input == "get":
+                reply = client.get_counter_value()
+            elif (action_input == "increase" or action_input == "decrease"):
+                reply = client.send_request(action_input)
+            elif (action_input == "close"):
+                break
+            else:
+                print("Invalid Input !")
+    
+    except (KeyboardInterrupt):
+        print("\nClient Exit")
+        
+    finally:
+        print("Client Disconnected.")

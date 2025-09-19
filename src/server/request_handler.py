@@ -3,13 +3,16 @@ import json
 import time
 from urllib.parse import urlparse, parse_qs
 import re
+import os
+
 
 # The server injects a StateManager instance via a class attribute.
 class CounterRequestHandler(BaseHTTPRequestHandler):
     state_manager = None
     replica_id = "S1"
     server_start_time = time.strftime("%Y%m%d_%H:%M:%S")
-    log_file = f"logs/server_{replica_id}_log_{server_start_time}.txt"
+    #log_file = f"../../logs/server_{replica_id}_log_{server_start_time}.txt"
+    log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"server_{replica_id}_log_{server_start_time}.txt")
 
     # block the default log of BaseHTTPRequestHandler
     # e.g. 127.0.0.1 - "GET /get HTTP/1.1" 200
@@ -62,6 +65,8 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, value, text_only_request)
             self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
         elif path == "/heartbeat":
+            ## get the value first.
+            value = self.state_manager.get()
             text = self.log_message('Received <%s, %s, request id: %d, heartbeat>', client_id, self.replica_id, request_num)
             text_only_request = re.search(r'<.*?>', text).group(0)
             self.log_message_before_after('state_%s = %d before processing %s', self.replica_id, value, text_only_request)
