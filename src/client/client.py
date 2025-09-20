@@ -103,7 +103,9 @@ class Client:
 if __name__ == "__main__":
 
     client_id = input("Input Client ID: ")
-    client = Client(client_id, "localhost:8080")
+    ip_address = input("server ip: ")
+    port = input("port: ")
+    client = Client(client_id, ip_address+":"+port)
     client.connect_to_server()
     """
     actions = ["get", "increase", "increase", "get", "decrease", "get"]
