@@ -1,17 +1,21 @@
 import subprocess
 import sys
 import os
+import json
 
 
 
-# Server Parameter
-HOST = "0.0.0.0"
-PORT = 8080
-replica_id = 'S1'
-state_file = ''
+try:
+    with open(os.path.join(os.path.dirname(__file__), "command_param.json"), "r") as file:
+        config = json.load(file)
 
-# Client Parameter
-# (1) Launch the server replica, S1.
+except:
+    print("Json File Not Found !")
+
+HOST = config["server_host"]
+PORT = config["server_port"]
+replica_id = config["server_replica_id"]
+state_file = config["server_state_file"]
 
 file_path = os.path.join(os.path.dirname(__file__), "..", "src", "server", "server.py")
 

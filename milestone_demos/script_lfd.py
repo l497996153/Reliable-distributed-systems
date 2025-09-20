@@ -1,15 +1,20 @@
 import subprocess
 import sys
 import os
+import json
 
-# Server Parameter
-HOST = "0.0.0.0"
-PORT = 8080
-freq = 8
-timeout = 12
 
-# Client Parameter
-# (1) Launch the server replica, S1.
+try:
+    with open(os.path.join(os.path.dirname(__file__), "command_param.json"), "r") as file:
+        config = json.load(file)
+
+except:
+    print("Json File Not Found !")
+
+HOST = config["lfd_host"]
+PORT = config["lfd_port"]
+freq = config["lfd_freq"]
+timeout = config["lfd_timeout"]
 
 file_path = os.path.join(os.path.dirname(__file__), "..", "src", "lfd", "heartbeat_client.py")
 
