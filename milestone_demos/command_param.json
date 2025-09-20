@@ -7,7 +7,7 @@
     
     
     "comment_LFD" : "LFD param",
-    "lfd_host": "0.0.0.0",
+    "lfd_host": "127.0.0.1",
     "lfd_port": 8080,
     "lfd_freq": 8,
     "lfd_timeout": 12
