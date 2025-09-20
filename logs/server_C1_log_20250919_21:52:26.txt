@@ -1,3 +1,0 @@
-[2025-09-19 21:52:26] C1: Connected to server localhost:8080
-[2025-09-19 21:52:29] Sent <C1, S1, request id: 1, increase>
-[2025-09-19 21:52:29] Received: <C1, S1, 1, reply>

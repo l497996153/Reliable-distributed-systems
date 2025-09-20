@@ -1,7 +1,0 @@
-[2025-09-19 13:46:43] C3: Connected to server localhost:8080
-[2025-09-19 13:46:47] Sent <C3, S1, request id: 1, get>
-[2025-09-19 13:46:47] Received: <C3, S1, 0, reply>
-[2025-09-19 13:46:48] Sent <C3, S1, request id: 2, increase>
-[2025-09-19 13:46:48] Received: <C3, S1, 1, reply>
-[2025-09-19 13:46:50] Sent <C3, S1, request id: 3, decrease>
-[2025-09-19 13:46:50] Received: <C3, S1, 0, reply>
