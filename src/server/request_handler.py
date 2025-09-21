@@ -12,6 +12,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
     # log_file = f"logs/server_{replica_id}_log_{server_start_time}.txt"
     log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"server_{replica_id}_log_{server_start_time.replace(':','_')}.txt")
 
+
     # block the default log of BaseHTTPRequestHandler
     # e.g. 127.0.0.1 - "GET /get HTTP/1.1" 200
     def log_request(self, code='-', size='-'):

@@ -13,6 +13,7 @@ class Client:
         #self.log_file = f"../../logs/client_{self.client_id}_log_{self.start_time}.txt"
         self.log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"client_{self.client_id}_log_{self.start_time.replace(':','_')}.txt")
 
+        
 
     def log(self, text):
         print(text)
