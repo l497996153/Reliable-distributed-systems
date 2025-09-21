@@ -1,0 +1,15 @@
+{
+    "comment_server" : "Server param",
+    "server_host" : "0.0.0.0",
+    "server_port" : 8080,
+    "server_replica_id" : "S1",
+    "server_state_file" : "",
+    
+    
+    "comment_LFD" : "LFD param",
+    "lfd_host": "127.0.0.1",
+    "lfd_port": 8080,
+    "lfd_freq": 8,
+    "lfd_timeout": 12
+
+}
