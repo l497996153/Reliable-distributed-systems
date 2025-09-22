@@ -50,6 +50,10 @@ if __name__ == "__main__":
     fld_id = 1
     log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"fld_{fld_id}_log_{start_time_filename.replace(':','_')}.txt")
 
-    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting LFD1 to {args.host}:{args.port} with heartbeat_freq={args.freq}")
+    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting LFD1 to http://{args.host}:{args.port} with heartbeat_freq={args.freq}")
     # print(f"[{time.strftime("%Y-%m-%d %H:%M:%S")}] Starting LFD1 to {args.host}:{args.port} with heartbeat_freq={args.freq}s")
-    lfd1(args.host, args.port, args.freq, args.timeout, log_file)
+    try:
+        lfd1(args.host, args.port, args.freq, args.timeout, log_file)
+    except KeyboardInterrupt:
+        print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] LFD1 terminated by user.\033[0m")
+
