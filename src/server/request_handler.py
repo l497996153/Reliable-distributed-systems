@@ -52,7 +52,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed_url.query)
         path = parsed_url.path
         client_id = query.get("client_id", ["Not get client id"])[0]
-        fld_id = query.get("fld_id", ["Not get fld id"])[0]
+        lfd_id = query.get("lfd_id", ["Not get lfd id"])[0]
         request_num = int(query.get("request_num", [0])[0])
 
         if path == "/get":
@@ -65,7 +65,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, value, text_only_request)
             self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
         elif path == "/heartbeat":
-            self.log_message("%s receives heartbeat from %s", self.replica_id, fld_id, color="\033[1;92m")
+            self.log_message("%s receives heartbeat from %s", self.replica_id, lfd_id, color="\033[1;92m")
             # Comment it since no need to write the before and after according to the document
             # text_only_request = re.search(r'<.*?>', text).group(0)
             # Comment it since no need to write the before and after according to the document
@@ -73,7 +73,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
             # Comment it since no need to write the before and after according to the document
             # self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, value, text_only_request)
-            self.log_message("%s sends heartbeat to %s", self.replica_id, fld_id, color="\033[1;92m")
+            self.log_message("%s sends heartbeat to %s", self.replica_id, lfd_id, color="\033[1;92m")
         else:
             self._send_json(404, {"error": "not found"})
 
