@@ -28,7 +28,7 @@ def check_timeouts():
         last_update = info["last_update"]
         if info["status"] != "failed" and (now - last_update > TIMEOUT):
             info["status"] = "failed"
-            log(f"[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) marked as FAILED")
+            log(f"\033[31m[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) marked as FAILED\033[0m")
 
 # =================== HTTP 请求处理器 ===================
 class GFDHandler(BaseHTTPRequestHandler):
@@ -58,7 +58,7 @@ class GFDHandler(BaseHTTPRequestHandler):
                 "status": "registered",
                 "last_update": time.time()
             }
-            log(f"[{timestamp}] Registered LFD={lfd_id} (server={server_id})")
+            log(f"\033[32m[{timestamp}] Registered LFD={lfd_id} (server={server_id})\033[0m")
             self._set_headers(200)
             self.wfile.write(json.dumps({"msg": "registered"}).encode())
 

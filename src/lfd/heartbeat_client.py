@@ -20,12 +20,12 @@ def register_with_gfd(gfd_host, gfd_port, lfd_id, server_id, log_file, timeout=5
     try:
         r = requests.post(gfd_url, json=payload, timeout=timeout)
         if r.status_code == 200:
-            log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Registered with GFD successfully.")
+            log(log_file, f"\033[32m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Registered with GFD successfully.\033[0m")
             return True
         else:
-            log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: GFD registration returned {r.status_code}")
+            log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: GFD registration returned {r.status_code}\033[0m")
     except requests.exceptions.RequestException as e:
-        log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Failed to register with GFD: {e}")
+        log(log_file, f"\033[31m[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Failed to register with GFD: {e}\033[0m")
     return False
 
 def report_status_to_gfd(gfd_host, gfd_port, lfd_id, server_id, status, log_file, timeout=5):
@@ -40,7 +40,7 @@ def report_status_to_gfd(gfd_host, gfd_port, lfd_id, server_id, status, log_file
     try:
         requests.post(gfd_url, json=payload, timeout=timeout)
     except requests.exceptions.RequestException as e:
-        log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Failed to report status to GFD: {e}")
+        log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Failed to report status to GFD: {e}\033[0m")
 
 def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
     lfd_id = "LFD1"
@@ -63,14 +63,14 @@ def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
                 log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id} Heartbeat acknowledged by {r.json().get('replica_id')}")
                 status = "alive"
             else:
-                log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Unexpected heartbeat response: {r.text}")
+                log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Unexpected heartbeat response: {r.text}\033[0m")
                 status = "warn"
         except requests.exceptions.RequestException:
             if time.time() - last_response_time > timeout:
-                log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Heartbeat failed! {server_id} not responding.")
+                log(log_file, f"\033[31m[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Heartbeat failed! {server_id} not responding.\033[0m")
                 status = "failed"
             else:
-                log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Temporary failure, will retry...")
+                log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Temporary failure, will retry...\033[0m")
                 status = "warn"
 
         # 向GFD汇报状态
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LFD1 Heartbeat Client with GFD reporting")
     parser.add_argument("--host", default="0.0.0.0", help="Local server host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="Local server port (default: 8080)")
-    parser.add_argument("--gfd_host", default="127.0.0.1", help="GFD host (default: 0.0.0.0)")
+    parser.add_argument("--gfd_host", default="0.0.0.0", help="GFD host (default: 0.0.0.0)")
     parser.add_argument("--gfd_port", type=int, default=6000, help="GFD port (default: 6000)")
     parser.add_argument("--freq", type=float, default=5.0, help="Heartbeat frequency in seconds")
     parser.add_argument("--timeout", type=float, default=10.0, help="Heartbeat timeout in seconds")
