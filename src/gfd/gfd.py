@@ -8,6 +8,11 @@ import os
 lfd_status_table = {}
 TIMEOUT = 10  # 超过10秒未更新视为failed
 
+# From writeup: Make sure that the GFD maintains an array of members, membership[], that lists all of the replica_ids of the current server replicas running in the system, 
+# along with a variable called member_count that represents the number of alive and healthy replica.
+membership = []
+member_count = 0
+
 # 日志文件
 start_time_filename = time.strftime("%Y%m%d_%H:%M:%S")
 log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"gfd_log_{start_time_filename.replace(':','_')}.txt")
@@ -23,12 +28,21 @@ def _timestamp():
 
 def check_timeouts():
     """检查LFD是否超时未汇报"""
+    global member_count
     now = time.time()
     for lfd_id, info in lfd_status_table.items():
         last_update = info["last_update"]
         if info["status"] != "failed" and (now - last_update > TIMEOUT):
             info["status"] = "failed"
-            log(f"\033[31m[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) marked as FAILED\033[0m")
+
+            # Delete the replica_id and update member_count
+            if info["server_id"] in membership:
+                server_id = info["server_id"]
+                membership.remove(info["server_id"])
+                member_count-=1
+                log(f"\033[32m[{_timestamp()}] GFD: Deleting server {server_id}...\033[0m")
+                log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
+            # log(f"\033[31m[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) marked as FAILED\033[0m")
 
 # =================== HTTP 请求处理器 ===================
 class GFDHandler(BaseHTTPRequestHandler):
@@ -38,6 +52,7 @@ class GFDHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        global member_count
         length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(length)
         try:
@@ -52,13 +67,20 @@ class GFDHandler(BaseHTTPRequestHandler):
             lfd_id = data.get("lfd_id")
             server_id = data.get("server_id")
             timestamp = _timestamp()
-
             lfd_status_table[lfd_id] = {
                 "server_id": server_id,
                 "status": "registered",
                 "last_update": time.time()
             }
-            log(f"\033[32m[{timestamp}] Registered LFD={lfd_id} (server={server_id})\033[0m")
+
+            # Add replica_id and update member_count
+            if server_id not in membership:
+                membership.append(server_id)
+                member_count+=1
+                log(f"\033[32m[{timestamp}] GFD: Adding server {server_id}...\033[0m")
+                log(f"\033[32m[{timestamp}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
+
+            # log(f"\033[32m[{timestamp}] Registered LFD={lfd_id} (server={server_id})\033[0m")
             self._set_headers(200)
             self.wfile.write(json.dumps({"msg": "registered"}).encode())
 
@@ -100,6 +122,7 @@ if __name__ == "__main__":
     TIMEOUT = args.timeout
     log(f"[{_timestamp()}] Starting GFD at {args.host}:{args.port} with timeout={TIMEOUT}s")
 
+    log(f"\033[32m[{_timestamp()}] GFD: {member_count} members")
     server = HTTPServer((args.host, args.port), GFDHandler)
 
     server.timeout = 1  # 每1秒处理一次请求或超时
