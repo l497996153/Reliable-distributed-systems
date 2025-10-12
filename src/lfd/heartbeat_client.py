@@ -49,6 +49,7 @@ def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
     server_url = f"http://{host}:{port}"
 
     lfd_has_registered = False
+    has_logged_failure = False
 
     # 注册到GFD，确保成功
     # while not register_with_gfd(gfd_host, gfd_port, lfd_id, server_id, log_file, timeout=timeout):
@@ -62,6 +63,7 @@ def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
             r = requests.get(f"{server_url}/heartbeat", params={"lfd_id": lfd_id}, timeout=timeout)
             if r.status_code == 200 and r.json().get("ok"):
                 last_response_time = time.time()
+                has_logged_failure = False
                 log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: Heartbeat acknowledged by {r.json().get('replica_id')}")
                 if lfd_has_registered == False:
                     log(log_file, f"\033[32m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: add replica {server_id}.\033[0m")
@@ -77,8 +79,9 @@ def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
             if time.time() - last_response_time > timeout:
                 log(log_file, f"\033[31m[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: Timeout! {server_id} does not respond.\033[0m")
                 status = "failed"
-                log(log_file, f"\033[31m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: delete replica {server_id} \033[0m")
-                break
+                if has_logged_failure == False:
+                    log(log_file, f"\033[31m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: delete replica {server_id} \033[0m")
+                    has_logged_failure = True
             else:
                 log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Does not receive respond from {server_id}, will retry...\033[0m")
                 status = "warn"
