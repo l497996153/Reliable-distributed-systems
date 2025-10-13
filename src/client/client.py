@@ -100,7 +100,7 @@ class Client:
                     self.received_replies[request_num] = replica_id
                 else:
                     # duplicated response, mark it
-                    self.log(f"[{self._timestamp()}] request_num {request_num}: duplicate reply from {replica_id}")
+                    self.log(f"[{self._timestamp()}] request_num {request_num}: Discard duplicate reply from {replica_id}")
         except Exception as e:
             self.log(f"[{self._timestamp()}] {self.client_id}: Failed to send request with {replica_id}: {e}")
             return False
@@ -154,7 +154,7 @@ class Client:
                         self.get_counter = data
                     else:
                         # duplicated reocrd, mark it
-                        self.log(f"[{self._timestamp()}] request_num {request_num}: duplicate reply from {replica_id}")
+                        self.log(f"[{self._timestamp()}] request_num {request_num}: Discard duplicate reply from {replica_id}")
             else:
                 print(f"[{self._timestamp()}] {self.client_id}: Failed to get counter value from {replica_id}")
                 return False
