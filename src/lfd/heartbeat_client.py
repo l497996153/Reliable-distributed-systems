@@ -98,15 +98,15 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8080, help="Local server port (default: 8080)")
     parser.add_argument("--gfd_host", default="0.0.0.0", help="GFD host (default: 0.0.0.0)")
     parser.add_argument("--gfd_port", type=int, default=6000, help="GFD port (default: 6000)")
-    parser.add_argument("--freq", type=float, default=5.0, help="Heartbeat frequency in seconds")
-    parser.add_argument("--timeout", type=float, default=10.0, help="Heartbeat timeout in seconds")
+    parser.add_argument("--freq", type=float, default=5.0, help="Heartbeat frequency in seconds (default: 5.0)")
+    parser.add_argument("--timeout", type=float, default=10.0, help="Heartbeat timeout in seconds (default: 10.0)")
+    parser.add_argument("--id", default="LFD1", help="LFD ID (default: LFD1)")
     args = parser.parse_args()
 
     start_time_filename  = time.strftime("%Y%m%d_%H:%M:%S")
-    fld_id = "LFD1"
-    log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"fld_{fld_id}_log_{start_time_filename.replace(':','_')}.txt")
+    log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"fld_{args.id}_log_{start_time_filename.replace(':','_')}.txt")
 
-    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting {fld_id} to http://{args.host}:{args.port} with heartbeat_freq={args.freq} and reporting to GFD http://{args.gfd_host}:{args.gfd_port}")
+    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting {args.id} to http://{args.host}:{args.port} with heartbeat_freq={args.freq} and reporting to GFD http://{args.gfd_host}:{args.gfd_port}")
     try:
         lfd1(args.host, args.port, args.gfd_host, args.gfd_port, args.freq, args.timeout, log_file)
     except KeyboardInterrupt:

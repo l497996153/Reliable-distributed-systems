@@ -13,7 +13,7 @@ def main():
     parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     parser.add_argument("--replica-id", default="S1", help="Replica (default: S1)")
-    parser.add_argument("--state-file", default=None, help="Optional JSON file for persistence")
+    parser.add_argument("--state-file", default=None, help="Optional JSON file for persistence (default: None)")
     args = parser.parse_args()
 
     state = StateManager(state_file=args.state_file, replica_id=args.replica_id)
