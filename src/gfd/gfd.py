@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GFD Server for LFDs")
     parser.add_argument("--host", default="0.0.0.0", help="GFD host (default 0.0.0.0)")
     parser.add_argument("--port", type=int, default=6000, help="GFD port (default 6000)")
-    parser.add_argument("--timeout", type=float, default=10.0, help="LFD heartbeat timeout in seconds")
+    parser.add_argument("--timeout", type=float, default=10.0, help="LFD heartbeat timeout in seconds (default 10.0)")
     args = parser.parse_args()
 
     TIMEOUT = args.timeout
