@@ -12,10 +12,10 @@ try:
 except:
     print("Json File Not Found !")
 
-HOST = config["server_host"]
-PORT = config["server_port"]
-replica_id = config["server_replica_id"]
-state_file = config["server_state_file"]
+HOST = config["server_host_2"]
+PORT = config["server_port_2"]
+replica_id = config["server_replica_id_2"]
+state_file = config["server_state_file_2"]
 
 file_path = os.path.join(os.path.dirname(__file__), "..", "src", "server", "server.py")
 

@@ -1,15 +1,51 @@
 {
-    "comment_server" : "Server param",
-    "server_host" : "0.0.0.0",
-    "server_port" : 8080,
-    "server_replica_id" : "S1",
-    "server_state_file" : "",
+    "id_server_1" : "Server replica 1",
+    "server_host_1" : "0.0.0.0",
+    "server_port_1" : 8080,
+    "server_replica_id_1" : "S1",
+    "server_state_file_1" : "",
+
+    "id_server_2" : "Server replica 2",
+    "server_host_2" : "0.0.0.0",
+    "server_port_2" : 8081,
+    "server_replica_id_2" : "S2",
+    "server_state_file_2" : "",
+
+    "id_server_3" : "Server Replica 3",
+    "server_host_3" : "0.0.0.0",
+    "server_port_3" : 8082,
+    "server_replica_id_3" : "S3",
+    "server_state_file_3" : "",
     
     
-    "comment_LFD" : "LFD param",
-    "lfd_host": "127.0.0.1",
-    "lfd_port": 8080,
-    "lfd_freq": 8,
-    "lfd_timeout": 12
+    "id_LFD_1" : "LFD1",
+    "lfd_server_host_1": "127.0.0.1",
+    "lfd_server_port_1": 8080,
+    "lfd_gfd_host_1": "127.0.0.1",
+    "lfd_gfd_port_1": 6000,
+    "lfd_freq_1": 10,
+    "lfd_timeout_1": 10,
+
+    "id_LFD_2" : "LFD2",
+    "lfd_server_host_2": "127.0.0.1",
+    "lfd_server_port_2": 8081,
+    "lfd_gfd_host_2": "127.0.0.1",
+    "lfd_gfd_port_2": 6000,
+    "lfd_freq_2": 10,
+    "lfd_timeout_2": 10,
+
+    "id_LFD_3" : "LFD3",
+    "lfd_server_host_3": "127.0.0.1",
+    "lfd_server_port_3": 8082,
+    "lfd_gfd_host_3": "127.0.0.1",
+    "lfd_gfd_port_3": 6000,
+    "lfd_freq_3": 10,
+    "lfd_timeout_3": 10,
+
+
+    "gfd_name" : "GFD",
+    "gfd_host" : "127.0.0.1",
+    "gfd_port" : 6000,
+    "gfd_time_out": 10
 
 }
