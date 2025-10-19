@@ -42,9 +42,9 @@ def report_status_to_gfd(gfd_host, gfd_port, lfd_id, server_id, status, log_file
     except requests.exceptions.RequestException as e:
         log(log_file, f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Failed to report status to GFD: {e}\033[0m")
 
-def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
-    lfd_id = "LFD1"
-    server_id = "S1"
+def lfd1(lfd_id, server_id, host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
+    # lfd_id = "LFD1"
+    # server_id = "S1"
     last_response_time = time.time()
     server_url = f"http://{host}:{port}"
 
@@ -94,20 +94,21 @@ def lfd1(host, port, gfd_host, gfd_port, heartbeat_freq, timeout, log_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LFD1 Heartbeat Client with GFD reporting")
+    parser.add_argument("--lfd_id", default="LFD1", help="LFD Id")
+    parser.add_argument("--server_id", default="S1", help="Server Id")
     parser.add_argument("--host", default="0.0.0.0", help="Local server host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8080, help="Local server port (default: 8080)")
     parser.add_argument("--gfd_host", default="0.0.0.0", help="GFD host (default: 0.0.0.0)")
     parser.add_argument("--gfd_port", type=int, default=6000, help="GFD port (default: 6000)")
     parser.add_argument("--freq", type=float, default=5.0, help="Heartbeat frequency in seconds (default: 5.0)")
     parser.add_argument("--timeout", type=float, default=10.0, help="Heartbeat timeout in seconds (default: 10.0)")
-    parser.add_argument("--id", default="LFD1", help="LFD ID (default: LFD1)")
     args = parser.parse_args()
 
     start_time_filename  = time.strftime("%Y%m%d_%H:%M:%S")
-    log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"fld_{args.id}_log_{start_time_filename.replace(':','_')}.txt")
+    log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"fld_{args.lfd_id}_log_{start_time_filename.replace(':','_')}.txt")
 
-    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting {args.id} to http://{args.host}:{args.port} with heartbeat_freq={args.freq} and reporting to GFD http://{args.gfd_host}:{args.gfd_port}")
+    log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting {args.lfd_id} to http://{args.host}:{args.port} with heartbeat_freq={args.freq} and reporting to GFD http://{args.gfd_host}:{args.gfd_port}")
     try:
-        lfd1(args.host, args.port, args.gfd_host, args.gfd_port, args.freq, args.timeout, log_file)
+        lfd1(args.lfd_id, args.server_id, args.host, args.port, args.gfd_host, args.gfd_port, args.freq, args.timeout, log_file)
     except KeyboardInterrupt:
-        print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] LFD1 terminated by user.\033[0m")
+        print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {args.lfd_id} terminated by user.\033[0m")
