@@ -72,13 +72,13 @@ def recompute_membership_for(server_id: str):
     if any_alive and not in_membership:
         membership.append(server_id)
         member_count += 1
-        log(f"\033[32m[{_timestamp()}] GFD: Adding server {server_id}...\033[0m")
+        log(f"\033[35m[{_timestamp()}] GFD: Adding server {server_id}...\033[0m")
         log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
 
     elif (not any_alive) and in_membership:
         membership.remove(server_id)
         member_count -= 1
-        log(f"\033[32m[{_timestamp()}] GFD: Deleting server {server_id}...\033[0m")
+        log(f"\033[35m[{_timestamp()}] GFD: Deleting server {server_id}...\033[0m")
         log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
 
 def check_timeouts():
@@ -158,7 +158,7 @@ class GFDHandler(BaseHTTPRequestHandler):
             }
 
             if prev_status != status:
-                log(f"[{timestamp}] Status change: LFD={lfd_id} -> {status}")
+                log(f"\033[31m[{timestamp}] Status change: LFD={lfd_id} -> {status}...\033[0m")
 
             # IMPORTANT: keep membership in sync on every status report
             recompute_membership_for(server_id)

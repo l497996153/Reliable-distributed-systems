@@ -58,13 +58,13 @@ def lfd1(lfd_id, server_id, host, port, gfd_host, gfd_port, heartbeat_freq, time
 
     while True:
         start_time = time.time()
-        log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: Sending heartbeat to {server_id}")
+        log(log_file, f"\033[35m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: Sending heartbeat to {server_id}\033[0m")
         try:
             r = requests.get(f"{server_url}/heartbeat", params={"lfd_id": lfd_id}, timeout=timeout)
             if r.status_code == 200 and r.json().get("ok"):
                 last_response_time = time.time()
                 has_logged_failure = False
-                log(log_file, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: Heartbeat acknowledged by {r.json().get('replica_id')}")
+                log(log_file, f"\033[35m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: Heartbeat acknowledged by {r.json().get('replica_id')}\033[0m")
                 if lfd_has_registered == False:
                     log(log_file, f"\033[32m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id}: add replica {server_id}.\033[0m")
                     while not register_with_gfd(gfd_host, gfd_port, lfd_id, server_id, log_file, timeout=timeout):
