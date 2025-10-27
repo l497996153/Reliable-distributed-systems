@@ -1,50 +1,104 @@
+#!/usr/bin/env python3
 import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import time
 import os
 
-# 全局状态表：lfd_id -> {server_id, status, last_update}
+# -------------------- Config & State --------------------
+
+# lfd_id -> { "server_id": str, "status": str, "last_update": float }
 lfd_status_table = {}
-TIMEOUT = 10  # 超过10秒未更新视为failed
 
-# From writeup: Make sure that the GFD maintains an array of members, membership[], that lists all of the replica_ids of the current server replicas running in the system, 
-# along with a variable called member_count that represents the number of alive and healthy replica.
-membership = []
-member_count = 0
+# Only these statuses are considered healthy (strict)
+ALIVE_STATUSES = {"alive"}
 
-# 日志文件
+# Heartbeat timeout (seconds): if exceeded, treat that LFD as failed
+TIMEOUT = 10.0
+
+# Membership (current healthy servers) & count
+membership = []   # list[str]
+member_count = 0  # int
+
+# Log file path
 start_time_filename = time.strftime("%Y%m%d_%H:%M:%S")
-log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"gfd_log_{start_time_filename.replace(':','_')}.txt")
+log_file = os.path.join(
+    os.path.dirname(__file__), "..", "..", "logs",
+    f"gfd_log_{start_time_filename.replace(':','_')}.txt"
+)
 
-def log(text):
-    """统一打印并写入日志文件"""
+# -------------------- Utils --------------------
+
+def log(text: str):
+    """Print and append to log file."""
     print(text)
     with open(log_file, "a") as f:
         f.write(text + "\n")
 
-def _timestamp():
+def _timestamp() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
-def check_timeouts():
-    """检查LFD是否超时未汇报"""
+def _is_lfd_alive(info: dict, now: float) -> bool:
+    """
+    An LFD is considered 'alive for membership purposes' iff:
+      - its reported status is strictly in ALIVE_STATUSES (e.g., 'alive'), and
+      - it has not timed out.
+    """
+    timed_out = (now - info["last_update"] > TIMEOUT)
+    return (info["status"] in ALIVE_STATUSES) and (not timed_out)
+
+# -------------------- Membership maintenance --------------------
+
+def recompute_membership_for(server_id: str):
+    """
+    Keep membership[] consistent with the aggregate of all LFDs
+    reporting for this server_id.
+      - If ANY LFD is alive (strictly in ALIVE_STATUSES and not timed out) -> ensure present.
+      - If NONE are alive -> ensure removed.
+    """
     global member_count
+
     now = time.time()
-    for lfd_id, info in lfd_status_table.items():
-        last_update = info["last_update"]
-        if info["status"] != "failed" and (now - last_update > TIMEOUT):
+    any_alive = False
+    for info in lfd_status_table.values():
+        if info["server_id"] != server_id:
+            continue
+        if _is_lfd_alive(info, now):
+            any_alive = True
+            break
+
+    in_membership = (server_id in membership)
+
+    if any_alive and not in_membership:
+        membership.append(server_id)
+        member_count += 1
+        log(f"\033[32m[{_timestamp()}] GFD: Adding server {server_id}...\033[0m")
+        log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
+
+    elif (not any_alive) and in_membership:
+        membership.remove(server_id)
+        member_count -= 1
+        log(f"\033[32m[{_timestamp()}] GFD: Deleting server {server_id}...\033[0m")
+        log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
+
+def check_timeouts():
+    """
+    Mark timed-out LFDs as failed (if they weren't already) and
+    recompute membership for their server.
+    """
+    now = time.time()
+    # Iterate over a list of items to avoid dict-size-change pitfalls
+    for lfd_id, info in list(lfd_status_table.items()):
+        # If it's already 'failed', no need to flip; we still recompute below
+        if (now - info["last_update"] > TIMEOUT) and info["status"] != "failed":
             info["status"] = "failed"
+            # Optional: log status change on timeout
+            log(f"[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) -> failed")
+        # Recompute for each server that had any chance of state change by timeout
+        recompute_membership_for(info["server_id"])
 
-            # Delete the replica_id and update member_count
-            if info["server_id"] in membership:
-                server_id = info["server_id"]
-                membership.remove(info["server_id"])
-                member_count-=1
-                log(f"\033[32m[{_timestamp()}] GFD: Deleting server {server_id}...\033[0m")
-                log(f"\033[32m[{_timestamp()}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
-            # log(f"\033[31m[{_timestamp()}] Timeout: LFD={lfd_id} (server={info['server_id']}) marked as FAILED\033[0m")
+# -------------------- HTTP Handler --------------------
 
-# =================== HTTP 请求处理器 ===================
 class GFDHandler(BaseHTTPRequestHandler):
     def _set_headers(self, code=200):
         self.send_response(code)
@@ -52,8 +106,7 @@ class GFDHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        global member_count
-        length = int(self.headers.get('Content-Length', 0))
+        length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
         try:
             data = json.loads(body)
@@ -62,76 +115,92 @@ class GFDHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": "invalid json"}).encode())
             return
 
-        # 注册
-        if self.path == "/register":
+        path = self.path
+
+        if path == "/register":
             lfd_id = data.get("lfd_id")
             server_id = data.get("server_id")
-            timestamp = _timestamp()
+            if not lfd_id or not server_id:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({"error": "missing lfd_id/server_id"}).encode())
+                return
+
+            # Register as 'registered' (NOT healthy). This will NOT add to membership.
             lfd_status_table[lfd_id] = {
                 "server_id": server_id,
                 "status": "registered",
                 "last_update": time.time()
             }
 
-            # Add replica_id and update member_count
-            if server_id not in membership:
-                membership.append(server_id)
-                member_count+=1
-                log(f"\033[32m[{timestamp}] GFD: Adding server {server_id}...\033[0m")
-                log(f"\033[32m[{timestamp}] GFD: {member_count} members: {' '.join(membership)}\033[0m")
+            # Safe to call; 'registered' isn't counted as alive
+            recompute_membership_for(server_id)
 
-            # log(f"\033[32m[{timestamp}] Registered LFD={lfd_id} (server={server_id})\033[0m")
             self._set_headers(200)
             self.wfile.write(json.dumps({"msg": "registered"}).encode())
+            return
 
-        # 状态汇报
-        elif self.path == "/status":
+        elif path == "/status":
             lfd_id = data.get("lfd_id")
             server_id = data.get("server_id")
-            status = data.get("status")
-            timestamp = _timestamp()
+            status = data.get("status")  # expected: 'alive' | 'warn' | 'failed' (or others)
+            if not lfd_id or not server_id or status is None:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({"error": "missing lfd_id/server_id/status"}).encode())
+                return
 
+            timestamp = _timestamp()
             prev_status = lfd_status_table.get(lfd_id, {}).get("status")
+
             lfd_status_table[lfd_id] = {
                 "server_id": server_id,
                 "status": status,
                 "last_update": time.time()
             }
+
             if prev_status != status:
                 log(f"[{timestamp}] Status change: LFD={lfd_id} -> {status}")
 
+            # IMPORTANT: keep membership in sync on every status report
+            recompute_membership_for(server_id)
+
             self._set_headers(200)
             self.wfile.write(json.dumps({"msg": "status received"}).encode())
+            return
 
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "unknown path"}).encode())
+            return
 
-    def log_message(self, format, *args):
-        """屏蔽默认HTTP日志"""
+    def log_message(self, fmt, *args):
+        # Silence BaseHTTPRequestHandler's default access logs
         return
 
-# =================== 主入口 ===================
-if __name__ == "__main__":
+# -------------------- Main --------------------
+
+def main():
     parser = argparse.ArgumentParser(description="GFD Server for LFDs")
     parser.add_argument("--host", default="0.0.0.0", help="GFD host (default 0.0.0.0)")
     parser.add_argument("--port", type=int, default=6000, help="GFD port (default 6000)")
-    parser.add_argument("--timeout", type=float, default=10.0, help="LFD heartbeat timeout in seconds (default 10.0)")
+    parser.add_argument("--timeout", type=float, default=10.0, help="LFD heartbeat timeout seconds (default 10.0)")
     args = parser.parse_args()
 
+    global TIMEOUT
     TIMEOUT = args.timeout
+
     log(f"[{_timestamp()}] Starting GFD at {args.host}:{args.port} with timeout={TIMEOUT}s")
+    log(f"\033[32m[{_timestamp()}] GFD: {member_count} members\033[0m")
 
-    log(f"\033[32m[{_timestamp()}] GFD: {member_count} members")
     server = HTTPServer((args.host, args.port), GFDHandler)
+    server.timeout = 1  # process a request or timeout every 1s
 
-    server.timeout = 1  # 每1秒处理一次请求或超时
-    while True:
-        check_timeouts()
-        try:
+    try:
+        while True:
+            check_timeouts()
             server.handle_request()
-        except KeyboardInterrupt:
-            log(f"\n[{_timestamp()}] GFD shutting down...")
-            server.server_close()
-            break
+    except KeyboardInterrupt:
+        log(f"\n[{_timestamp()}] GFD shutting down...")
+        server.server_close()
 
+if __name__ == "__main__":
+    main()

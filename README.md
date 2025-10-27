@@ -16,7 +16,8 @@ Implementation of fault-tolerant distributed counter with active/passive replica
 - `--gfd_port`: GFD port (default: 6000)
 - `--freq`: Heartbeat frequency in seconds (default: 5.0)
 - `--timeout`: Heartbeat timeout in seconds (default: 10.0)
-- `--id`: LFD ID (default: LFD1)
+- `--lfd_id`: LFD ID (default: LFD1)
+- `--server_id`: Server ID
 
 ### Server
 `python3 src/server/server.py`
