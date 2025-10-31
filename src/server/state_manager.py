@@ -101,6 +101,9 @@ class StateManager:
         with self._lock:
             self._load_replica_file()
 
+            if self._primary and self._primary[0] == self._replica_id:
+                return Role.PRIMARY
+
             if len(self._primary) == 0:
                 self._primary = [self._replica_id, self._replica_host, self._replica_port]
                 self._persist_replica_file()
