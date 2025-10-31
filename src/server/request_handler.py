@@ -4,10 +4,17 @@ import time
 from urllib.parse import urlparse, parse_qs
 import re
 import os
+from enum import Enum
+
+class Role(Enum):
+    PRIMARY = "primary"
+    BACKUP = "backup"
+
 # The server injects a StateManager instance via a class attribute.
 class CounterRequestHandler(BaseHTTPRequestHandler):
     state_manager = None
     replica_id = "S1"
+    role = Role.PRIMARY
     server_start_time = time.strftime("%Y%m%d_%H:%M:%S")
     # log_file = f"logs/server_{replica_id}_log_{server_start_time}.txt"
     log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"server_{replica_id}_log_{server_start_time.replace(':','_')}.txt")
@@ -109,5 +116,11 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             # self.log_message('Sending <reply> for /decrease with counter=%d', value)
             self._send_json(200, {"counter": value, "replica_id": self.replica_id})
             text = self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
+        elif self.path == "/send_checkpoint":
+            # Primary replica sending checkpoint request to backups
+            self.state_manager.set(message_data.get("counter", 0))
+            value = self.state_manager.get()
+            self.log_message_before_after('%s received checkpoint request, new value: %d', self.replica_id, value)
+            self._send_json(200, {"ok": True, "replica_id": self.replica_id})
         else:
             self._send_json(404, {"error": "not found"})
