@@ -3,21 +3,28 @@ import os
 import threading
 import time
 from typing import Optional
+from request_handler import Role
 
 # Maintain the counter value in json
 class StateManager:
-    def __init__(self, state_file: Optional[str] = None, replica_id: str = "S1"):
+    def __init__(self, state_file: Optional[str] = None, replica_file: Optional[str] = None, replica_id: str = "S1"):
         self._lock = threading.Lock()
         self._value = 0
+        self._primary = ""
+        self._backup = []
         self._state_file = state_file
+        self._replica_file = replica_file
         self._replica_id = replica_id
+
         if self._state_file and os.path.exists(self._state_file):
-            self._load()
+            self._load_state_file()
+        if self._replica_file and os.path.exists(self._replica_file):
+            self._load_replica_file()
 
     def _timestamp(self) -> str:
         return time.strftime("%Y-%m-%d %H:%M:%S")
 
-    def _persist(self):
+    def _persist_state_file(self):
         if not self._state_file:
             return
         tmp = f"{self._state_file}.tmp"
@@ -28,13 +35,33 @@ class StateManager:
             os.fsync(f.fileno())
         os.replace(tmp, self._state_file)
 
-    def _load(self):
+    def _persist_replica_file(self):
+        if not self._replica_file:
+            return
+        tmp = f"{self._replica_file}.tmp"
+        data = {"primary": self._replica_id, "backup": self._backup}
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, self._replica_file)
+
+    def _load_state_file(self):
         try:
             with open(self._state_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self._value = int(data.get("counter", 0))
         except Exception:
             self._value = 0
+
+    def _load_replica_file(self):
+        try:
+            with open(self._replica_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self._primary = data.get("primary", "")
+                self._backup = data.get("backup", [])
+        except Exception:
+            self._primary = ""
 
     def get(self) -> int:
         with self._lock:
@@ -47,7 +74,7 @@ class StateManager:
             self._value += 1
             after = self._value
             # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: increase>\033[0m")
-            self._persist()
+            self._persist_state_file()
             return self._value
 
     def decrease(self) -> int:
@@ -57,5 +84,25 @@ class StateManager:
             self._value -= 1
             after = self._value
             # print(f"\033[96m[{self._timestamp()}] state_{self._replica_id} = {after} after processing <request: decrease>\033[0m")
-            self._persist()
+            self._persist_state_file()
             return self._value
+        
+
+    def set(self, v: int) -> int:
+        # Set the counter to an exact value (used for passive checkpointing)
+        with self._lock:
+            self._value = int(v)
+            self._persist_state_file()
+            return self._value
+        
+    def setPrimary(self) -> Role:
+        with self._lock:
+            self._load_replica_file()
+            if self._primary == "":
+                self._primary = self._replica_id
+                self._persist_replica_file()
+                return Role.PRIMARY
+
+            self._backup.append(self._replica_id)
+            self._persist_replica_file()
+            return Role.BACKUP
