@@ -183,6 +183,7 @@ def main():
     parser.add_argument("--host", default="0.0.0.0", help="GFD host (default 0.0.0.0)")
     parser.add_argument("--port", type=int, default=6000, help="GFD port (default 6000)")
     parser.add_argument("--timeout", type=float, default=10.0, help="LFD heartbeat timeout seconds (default 10.0)")
+    parser.add_argument("--replica-file", default="../server/replica.json", help="Path to replica file (default ../server/replica.json)")
     args = parser.parse_args()
 
     global TIMEOUT
@@ -193,6 +194,10 @@ def main():
 
     server = HTTPServer((args.host, args.port), GFDHandler)
     server.timeout = 1  # process a request or timeout every 1s
+
+    # Clean replica.json
+    if os.path.exists(args.replica_file):
+        json.dump({}, open(args.replica_file, "w"))
 
     try:
         while True:
