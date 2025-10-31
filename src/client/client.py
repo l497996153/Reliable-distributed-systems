@@ -3,6 +3,11 @@ import json
 import time
 import os
 import threading
+import random
+import sys
+import select
+import termios
+import tty
 
 class Client:
     def __init__(self, client_id, server_addresses):
@@ -166,6 +171,28 @@ class Client:
     def _timestamp(self):
         return time.strftime("%Y-%m-%d %H:%M:%S")
 
+class _RawInput:
+    def __enter__(self):
+        if sys.stdin.isatty():
+            self._fd = sys.stdin.fileno()
+            self._old = termios.tcgetattr(self._fd)
+            tty.setcbreak(self._fd)
+        else:
+            self._fd = None
+        return self
+    def __exit__(self, exc_type, exc, tb):
+        if self._fd is not None:
+            termios.tcsetattr(self._fd, termios.TCSADRAIN, self._old)
+
+def _esc_pressed(timeout=0.0):
+    if not sys.stdin.isatty():
+        return False
+    r, _, _ = select.select([sys.stdin], [], [], timeout)
+    if r:
+        ch = sys.stdin.read(1)
+        return ch == '\x1b'  # ESC
+    return False
+
 # Example usage
 if __name__ == "__main__":
 
@@ -193,20 +220,20 @@ if __name__ == "__main__":
         time.sleep(3)
     """
     try:
-
-        while True:
-
-            action_input = input("Enter the action (get, increase, decrease, or close): ")
-            reply = None
-
-            if action_input == "get":
-                reply = client.get_counter_value()
-            elif (action_input == "increase" or action_input == "decrease"):
-                reply = client.send_request(action_input)
-            elif (action_input == "close"):
-                break
-            else:
-                print("Invalid Input !")
+        with _RawInput():
+            while True:
+                if _esc_pressed(0):
+                    print("Exiting loop.")
+                    break
+                action = random.choice(("get", "increase", "decrease"))  #random choose action input("Enter the action (get, increase, decrease, or close): ")
+                reply = None
+                if action == "get":
+                    reply = client.get_counter_value()
+                elif (action == "increase" or action == "decrease"):
+                    reply = client.send_request(action)
+                else:
+                    print("Invalid Input !")
+                time.sleep(10)
     
     except (KeyboardInterrupt):
         print("\nClient Exit")
