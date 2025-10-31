@@ -116,27 +116,11 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             # self.log_message('Sending <reply> for /decrease with counter=%d', value)
             self._send_json(200, {"counter": value, "replica_id": self.replica_id})
             text = self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
-        elif self.path == "/sync":
-            # Passive replication checkpoint: set exact counter value
-            if length > 0:
-                try:
-                    body = json.loads(body)
-                except Exception:
-                    body = {}
-
-            new_val = body.get("counter")
-            if new_val is None:
-                self._send_json(400, {"error": "missing counter"})
-                return
-
-            before = self.state_manager.get()
-            self.log_message_before_after('state_%s = %d before processing <checkpoint>', self.replica_id, before, "")
-            after = self.state_manager.set(int(new_val))
-            self.log_message_before_after('state_%s = %d after processing <checkpoint>', self.replica_id, after, "")
-            self._send_json(200, {"ok": True, "replica_id": self.replica_id, "counter": after})
         elif self.path == "/send_checkpoint":
             # Primary replica sending checkpoint request to backups
-            self.log_message('%s received checkpoint request', self.replica_id)
+            self.state_manager.set(message_data.get("counter", 0))
+            value = self.state_manager.get()
+            self.log_message_before_after('%s received checkpoint request, new value: %d', self.replica_id, value)
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
         else:
             self._send_json(404, {"error": "not found"})

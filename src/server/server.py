@@ -25,7 +25,7 @@ def main():
                         help="Send periodic checkpoints (default: 5)")
     args = parser.parse_args()
 
-    state = StateManager(state_file=args.state_file, replica_file=args.replica_file, replica_id=args.replica_id)
+    state = StateManager(state_file=args.state_file, replica_file=args.replica_file, replica_id=args.replica_id, replica_host=args.host, replica_port=args.port)
     checkpoint_handler = CheckpointHandler(time.time(), args.checkpoint_freq, state)
 
     # Setup role for current replica
@@ -46,7 +46,7 @@ def main():
         while True: 
             # Send checkpoint request to other backups
             if role == Role.PRIMARY:
-                checkpoint_handler.send_request(time.time())
+                checkpoint_handler.send_request()
             server.handle_request()
     except KeyboardInterrupt:
         # clear_json(args.replica_file)
