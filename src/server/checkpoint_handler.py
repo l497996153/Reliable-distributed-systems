@@ -15,6 +15,15 @@ class CheckpointHandler:
     def _should_send(self, now_wall):
         # Check if at least freq seconds have elapsed since last send
         return (now_wall - self._last_time) >= self._freq
+    
+
+    def _drop_connection(self, replica_id):
+        conn = self.connections.pop(replica_id, None)
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def _ensure_connection(self, replica_id, host, port, timeout=2.0):
         # Create or reuse HTTPConnection for replica
@@ -75,6 +84,7 @@ class CheckpointHandler:
             except Exception as e:
                 results[replica_id] = False
                 print(f"\033[91m[{wall_ts}] {primary_id}: Failed to send checkpoint to {replica_id}: {e}\033[0m")
+                self._drop_connection(replica_id)
 
         self.checkpoint_count += 1
 
