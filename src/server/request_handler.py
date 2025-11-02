@@ -25,7 +25,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
     def log_request(self, code='-', size='-'):
         pass
 
-    def log_message(self, fmt, *args, color="\033[1;96m"):
+    def log_message(self, fmt, *args, color="\033[0;96m"):
         # Add timestamp as suggested in the guide
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
         text = f"{color}[{ts}] {self.address_string()} - {fmt % args}\033[0m"
@@ -35,10 +35,10 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             f.write(f"[{ts}] {self.address_string()} - {fmt % args}\n")
         return text
     
-    def log_message_before_after(self, fmt, *args):
+    def log_message_before_after(self, fmt, *args, color="\033[0;35m"):
         # Prepend timestamp as suggested in the guide
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
-        text = f"[{ts}] {self.address_string()} - {fmt % args}"
+        text = f"{color}[{ts}] {self.address_string()} - {fmt % args}\033[0;35m"
         print(text)
         # write in log
         with open(self.log_file, "a") as f:
@@ -118,9 +118,10 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             text = self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
         elif self.path == "/send_checkpoint":
             # Primary replica sending checkpoint request to backups
-            self.state_manager.set(message_data.get("counter", 0))
+            self.state_manager.set(message_data.get("state", 0))
             value = self.state_manager.get()
-            self.log_message_before_after('%s received checkpoint request, new value: %d', self.replica_id, value)
+            checkpoint_count = message_data.get("checkpoint_count", 0)
+            self.log_message('%s received checkpoint request: new state value is %d, new checkpoint count is: %d', self.replica_id, value, checkpoint_count, color="\033[0;36m")
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
         else:
             self._send_json(404, {"error": "not found"})

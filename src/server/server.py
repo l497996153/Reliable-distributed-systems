@@ -37,16 +37,22 @@ def main():
 
     # Start listening
     server = SingleThreadedHTTPServer((args.host, args.port), CounterRequestHandler)
+    server.timeout = 0.1
     print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Listening on http://{args.host}:{args.port} as {args.replica_id}\033[0m")
     print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat\033[0m")
 
-    print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] This replica becomes {role}\033[0m")
+    if role == Role.BACKUP:
+        print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] This replica now is a backup server \033[0m")
+    else:
+        print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] This replica now is a primary server \033[0m")
 
     try:
+        # Writeup said that the checkpoint_count is 1 at first.
         while True: 
             # Send checkpoint request to other backups
             if role == Role.PRIMARY:
                 checkpoint_handler.send_request()
+                # Writeup said that the checkpoint_count will be increased after sending the checkpoint request.
             server.handle_request()
     except KeyboardInterrupt:
         # clear_json(args.replica_file)

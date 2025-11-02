@@ -9,6 +9,7 @@ class CheckpointHandler:
         self.state_manager = state_manager
         self._path = path
         self.connections = {}
+        self.checkpoint_count = 1
 
     def _should_send(self, now_wall):
         # Check if at least freq seconds have elapsed since last send
@@ -44,7 +45,9 @@ class CheckpointHandler:
                     "primary_id": primary_id,
                     "replica_id": replica_id,
                     "timestamp": wall_ts,
-                    "counter": self.state_manager.get(),
+                    #"counter": self.state_manager.get(),
+                    "state": self.state_manager.get(),
+                    "checkpoint_count": self.checkpoint_count
                 }
                 body = json.dumps(message_data)
 
@@ -55,7 +58,7 @@ class CheckpointHandler:
                     body=body,
                     headers={"Content-Type": "application/json"},
                 )
-                print(f"\033[94m[{wall_ts}] Sent checkpoint: <{primary_id} -> {replica_id}>\033[0m")
+                print(f"\033[94m[{wall_ts}] Sent checkpoint: <{primary_id} -> {replica_id}>, state is: {self.state_manager.get()}, checkpoint counter is: {self.checkpoint_count}\033[0m")
 
                 # Read and parse response
                 resp = conn.getresponse()
@@ -73,5 +76,7 @@ class CheckpointHandler:
             except Exception as e:
                 results[replica_id] = False
                 print(f"\033[91m[{wall_ts}] {primary_id}: Failed to send checkpoint to {replica_id}: {e}\033[0m")
+
+        self.checkpoint_count += 1
 
         return results
