@@ -7,21 +7,18 @@ from request_handler import Role
 
 # Maintain the counter value in json
 class StateManager:
-    def __init__(self, state_file: Optional[str] = None, replica_file: Optional[str] = None, replica_id: str = "S1", replica_host: str = "0.0.0.0", replica_port: int = 8080):
+    def __init__(self, state_file: Optional[str] = None, replica_id: str = "S1", replica_host: str = "0.0.0.0", replica_port: int = 8080):
         self._lock = threading.Lock()
         self._value = 0
         self._primary = []
         self._backup = []
         self._state_file = state_file
-        self._replica_file = replica_file
         self._replica_id = replica_id
         self._replica_host = replica_host
         self._replica_port = replica_port
 
         if self._state_file and os.path.exists(self._state_file):
             self._load_state_file()
-        if self._replica_file and os.path.exists(self._replica_file):
-            self._load_replica_file()
 
     def _timestamp(self) -> str:
         return time.strftime("%Y-%m-%d %H:%M:%S")
@@ -36,17 +33,6 @@ class StateManager:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, self._state_file)
-
-    def _persist_replica_file(self):
-        if not self._replica_file:
-            return
-        tmp = f"{self._replica_file}.tmp"
-        data = {"primary": self._primary, "backup": self._backup}
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, self._replica_file)
 
     def _load_state_file(self):
         try:
@@ -96,23 +82,3 @@ class StateManager:
             self._value = int(v)
             self._persist_state_file()
             return self._value
-        
-    def setPrimary(self) -> Role:
-        with self._lock:
-            self._load_replica_file()
-
-            if self._primary and self._primary[0] == self._replica_id:
-                return Role.PRIMARY
-
-            if len(self._primary) == 0:
-                self._primary = [self._replica_id, self._replica_host, self._replica_port]
-                self._persist_replica_file()
-                return Role.PRIMARY
-            
-            for backup in self._backup:
-                if backup[0] == self._replica_id:
-                    return Role.BACKUP
-
-            self._backup.append([self._replica_id, self._replica_host, self._replica_port])
-            self._persist_replica_file()
-            return Role.BACKUP
