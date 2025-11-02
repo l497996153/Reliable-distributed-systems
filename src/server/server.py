@@ -20,19 +20,27 @@ def main():
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     parser.add_argument("--replica-id", default="S1", help="Replica (default: S1)")
     parser.add_argument("--state-file", default=None, help="Optional JSON file for persistence (default: None)")
-    parser.add_argument("--replica-file", default="./replica.json", help="Optional JSON file for replica checks (default: ./replica.json)")
-    parser.add_argument("--checkpoint-freq", type=int, default=5,
-                        help="Send periodic checkpoints (default: 5)")
+    parser.add_argument("--checkpoint-freq", type=int, default=5, help="Send periodic checkpoints (default: 5)")
+    parser.add_argument("--is-primary", type=int, default=1, help="Whether this server is primary replica (true/false)")
+    parser.add_argument("--backup1-name", default="S1", help="Backup Replica 1 Name")
+    parser.add_argument("--backup2-name", default="S1", help="Backup Replica 2 Name")
+    parser.add_argument("--backup1-host", default="0.0.0.0", help="Backup Replica 1 Host")
+    parser.add_argument("--backup1-port", default="8080", help="Backup Replica 1 Port")
+    parser.add_argument("--backup2-host", default="0.0.0.0", help="Backup Replica 2 Host")
+    parser.add_argument("--backup2-port", default="8080", help="Backup Replica 2 Port")
     args = parser.parse_args()
 
-    state = StateManager(state_file=args.state_file, replica_file=args.replica_file, replica_id=args.replica_id, replica_host=args.host, replica_port=args.port)
-    checkpoint_handler = CheckpointHandler(time.time(), args.checkpoint_freq, state)
-
-    # Setup role for current replica
-    role = state.setPrimary()
+    state = StateManager(state_file=args.state_file, replica_id=args.replica_id, replica_host=args.host, replica_port=args.port)
+    checkpoint_handler = CheckpointHandler(time.time(), args.checkpoint_freq, state, curr_replica_id=args.replica_id)
 
     CounterRequestHandler.state_manager = state
     CounterRequestHandler.replica_id = args.replica_id
+
+    if args.is_primary == 1:
+        role = Role.PRIMARY
+    else:
+        role = Role.BACKUP
+
     CounterRequestHandler.role = role
 
     # Start listening
@@ -51,7 +59,7 @@ def main():
         while True: 
             # Send checkpoint request to other backups
             if role == Role.PRIMARY:
-                checkpoint_handler.send_request()
+                checkpoint_handler.send_request([[args.backup1_name, args.backup1_host, args.backup1_port], [args.backup2_name, args.backup2_host, args.backup2_port]])
                 # Writeup said that the checkpoint_count will be increased after sending the checkpoint request.
             server.handle_request()
     except KeyboardInterrupt:
