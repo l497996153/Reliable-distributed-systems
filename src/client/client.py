@@ -89,7 +89,7 @@ class Client:
             # Send POST request
             self.connections[replica_id].request("POST", path, body=message_json, 
                                                 headers={"Content-Type": "application/json"})
-            self.log(f"[{self._timestamp()}] Sent: <{self.client_id}, {replica_id}, {request_num}, {action}>")
+            self.log(f"[{self._timestamp()}] Sent: <{self.client_id}, {replica_id}, request id: {request_num}, {action}>")
             
             # Receive response
             response = self.connections[replica_id].getresponse() 
