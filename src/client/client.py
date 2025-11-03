@@ -2,7 +2,6 @@ from http.client import HTTPConnection
 import json
 import time
 import os
-import threading
 import random
 import sys
 import select
@@ -18,10 +17,9 @@ class Client:
         self.start_time = time.strftime("%Y%m%d_%H:%M:%S")
         #self.log_file = f"../../logs/client_{self.client_id}_log_{self.start_time}.txt"
         self.log_file = os.path.join(os.path.dirname(__file__), "..",'..', "logs", f"client_{self.client_id}_log_{self.start_time.replace(':','_')}.txt")
-        self.received_replies = {}  # {request_num: replica_id} check duplication
         self.success_count = 0
         self.get_counter = None
-        self.reply_lock = threading.Lock()
+        self.primary = None
 
         
 
@@ -39,6 +37,32 @@ class Client:
             except Exception as e:
                 self.log(f"[{self._timestamp()}] {self.client_id}: Connection to {replica_id} failed: {e}")
 
+        connected = "S1"
+        '''for replica_id in list(self.connections.keys()):
+            try:
+                conn = self.connections[replica_id]
+                conn.request("GET", f"/get?client_id={self.client_id}&request_num={self.request_num}")
+                resp = conn.getresponse()
+                raw = resp.read().decode()
+                if resp.status == 200 and raw:
+                    try:
+                        data = json.loads(raw)
+                        if data.get("primary") is True:
+                            connected = replica_id
+                            self.log(f"[{self._timestamp()}] {self.client_id}: Primary discovered by probe: {discovered}")
+                            break
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        '''
+        # Default to S1
+        if connected in self.connections:
+            self.primary = connected
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary is {self.primary}")
+        else:
+            self.log(f"[{self._timestamp()}] {self.client_id}: No primary server connections available")
+
     def send_request(self, action):
         # Check connections
         if not self.connections:
@@ -54,25 +78,35 @@ class Client:
             self.log(f"[{self._timestamp()}] {self.client_id}: Invalid action for send_request: {action}")
             return False
 
-        threads = []
-        self.success_count = 0
-        # send_request to all replica 
-        for replica_id in self.connections.keys():
-            thread = threading.Thread(
-                target=self._send_to_replica,
-                args=(replica_id, path, self.request_num, action)
-            )
-            threads.append(thread)
-            thread.start()
+        # Ensure we have a primary known; if not, try to probe again
+        if not self.primary:
+            self.connect_to_servers()
+        if not self.primary:
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary not found")
+            return False
 
-        for thread in threads:
-            thread.join()
-        
-        if self.success_count > 0:
+        # send request only to primary
+        if self.primary not in self.connections:
+            try:
+                self.connections[self.primary] = HTTPConnection(self.server_addresses[self.primary])
+            except Exception as e:
+                self.log(f"[{self._timestamp()}] {self.client_id}: Cannot connect to primary {self.primary}: {e}")
+                return False
+
+        sent = self._send_to_replica(self.primary, path, self.request_num, action)
+        if sent:
             self.request_num += 1
             return True
         else:
-            self.log("All replicas failed...")
+            # Try to reconnect primary once and retry
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary {self.primary} failed; attempting reconnection")
+            self.primary = None
+            self.connect_to_servers()
+            if self.primary and self.primary in self.connections:
+                if self._send_to_replica(self.primary, path, self.request_num, action):
+                    self.request_num += 1
+                    return True
+            self.log(f"[{self._timestamp()}] {self.client_id}: Request failed after reconnection")
             return False
 
     def _send_to_replica(self, replica_id, path, request_num, action):
@@ -87,27 +121,30 @@ class Client:
 
         try:
             # Send POST request
-            self.connections[replica_id].request("POST", path, body=message_json, 
+            self.connections[replica_id].request("POST", path, body=message_json,
                                                 headers={"Content-Type": "application/json"})
-            self.log(f"[{self._timestamp()}] Sent: <{self.client_id}, {replica_id}, {request_num}, {action}>")
-            
+            self.log(f"[{self._timestamp()}] Sent: <{self.client_id}, {replica_id}, request id: {request_num}, {action}>")
+
             # Receive response
-            response = self.connections[replica_id].getresponse() 
-            data = response.read().decode()
-            # Convert data from string to json
-            data = json.loads(data) 
-            self.log(f"[{self._timestamp()}] Received: <{self.client_id}, {replica_id}, {data['counter']}, reply>")
-            
-            with self.reply_lock:
-                self.success_count += 1
-                if request_num not in self.received_replies:
-                    # first response record
-                    self.received_replies[request_num] = replica_id
-                else:
-                    # duplicated response, mark it
-                    self.log(f"[{self._timestamp()}] request_num {request_num}: Discard duplicate reply from {replica_id}")
+            response = self.connections[replica_id].getresponse()
+            raw = response.read().decode()
+            if response.status == 200:
+                try:
+                    data = json.loads(raw) if raw else {}
+                except Exception:
+                    data = {}
+                self.log(f"[{self._timestamp()}] Received: <{self.client_id}, {replica_id}, {data.get('counter')}, reply>")
+                return True
+            else:
+                self.log(f"[{self._timestamp()}] {self.client_id}: Bad response from {replica_id}: {response.status} body={raw}")
+                return False
         except Exception as e:
-            self.log(f"[{self._timestamp()}] {self.client_id}: Failed to send request with {replica_id}: {e}")
+            self.log(f"[{self._timestamp()}] {self.client_id}: Failed to send request to {replica_id}: {e}")
+            # attempt to recreate connection lazily
+            try:
+                self.connections[replica_id] = HTTPConnection(self.server_addresses[replica_id])
+            except Exception:
+                pass
             return False
 
     def get_counter_value(self):
@@ -116,25 +153,37 @@ class Client:
             self.log(f"[{self._timestamp()}] {self.client_id}: No connections established")
             return False
 
-        threads = []
-        self.success_count = 0
-        
-        for replica_id in self.connections.keys():
-            thread = threading.Thread(
-                target=self._get_from_replica,
-                args=(replica_id, self.request_num)
-            )
-            threads.append(thread)
-            thread.start()
+        # Ensure primary known
+        if not self.primary:
+            self.connect_to_servers()
+        if not self.primary:
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary not known")
+            return False
 
-        for thread in threads:
-            thread.join()
+        # Request counter only from primary
+        if self.primary not in self.connections:
+            try:
+                self.connections[self.primary] = HTTPConnection(self.server_addresses[self.primary])
+            except Exception as e:
+                self.log(f"[{self._timestamp()}] {self.client_id}: Cannot connect to primary {self.primary}: {e}")
+                return False
 
-        if self.success_count > 0:
+        data = self._get_from_replica(self.primary, self.request_num)
+        if data:
             self.request_num += 1
-            return self.get_counter
+            self.get_counter = data
+            return data
         else:
-            self.log("All replicas failed...")
+            # try connecting once
+            self.primary = None
+            self.connect_to_servers()
+            if self.primary and self.primary in self.connections:
+                data = self._get_from_replica(self.primary, self.request_num)
+                if data:
+                    self.request_num += 1
+                    self.get_counter = data
+                    return data
+            self.log(f"[{self._timestamp()}] {self.client_id}: Failed to get counter from primary {self.primary}")
             return False
 
     def _get_from_replica(self, replica_id, request_num):
@@ -143,25 +192,17 @@ class Client:
             # self.connection.request("GET", f"/get")
             self.connections[replica_id].request("GET", f"/get?client_id={self.client_id}&request_num={request_num}")
             self.log(f"[{self._timestamp()}] Sent <{self.client_id}, {replica_id}, request id: {self.request_num}, get>")
-
             response = self.connections[replica_id].getresponse()
+            raw = response.read().decode()
             if response.status == 200:
-                data = response.read().decode()
-                data = json.loads(data)
-                # print(f"[{self._timestamp()}] {self.client_id}: Counter value received: {data}")
-                # For the first milestone, hardcode this to S1.
-                self.log(f"[{self._timestamp()}] Received: <{self.client_id}, {replica_id}, {data['counter']}, reply>")
-                with self.reply_lock:
-                    self.success_count += 1
-                    if request_num not in self.received_replies:
-                        # first response record
-                        self.received_replies[request_num] = replica_id
-                        self.get_counter = data
-                    else:
-                        # duplicated reocrd, mark it
-                        self.log(f"[{self._timestamp()}] request_num {request_num}: Discard duplicate reply from {replica_id}")
+                try:
+                    data = json.loads(raw) if raw else {}
+                except Exception:
+                    data = {}
+                self.log(f"[{self._timestamp()}] Received: <{self.client_id}, {replica_id}, {data.get('counter')}, reply>")
+                return data
             else:
-                print(f"[{self._timestamp()}] {self.client_id}: Failed to get counter value from {replica_id}")
+                self.log(f"[{self._timestamp()}] {self.client_id}: Failed to get counter value from {replica_id}: {response.status} body={raw}")
                 return False
         except Exception as e:
             self.log(f"[{self._timestamp()}] {self.client_id}: Get request to {replica_id} failed: {e}")

@@ -3,16 +3,27 @@ import json
 from http.client import HTTPConnection
 
 class CheckpointHandler:
-    def __init__(self, last_time=None, freq=1.0, state_manager=None, path="/send_checkpoint"):
+    def __init__(self, last_time=None, freq=1.0, state_manager=None, path="/send_checkpoint", curr_replica_id="S1"):
         self._last_time = time.time() - freq if last_time is None else float(last_time)
         self._freq = float(freq)
         self.state_manager = state_manager
         self._path = path
         self.connections = {}
+        self.checkpoint_count = 1
+        self.curr_replica_id = curr_replica_id
 
     def _should_send(self, now_wall):
         # Check if at least freq seconds have elapsed since last send
         return (now_wall - self._last_time) >= self._freq
+    
+
+    def _drop_connection(self, replica_id):
+        conn = self.connections.pop(replica_id, None)
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def _ensure_connection(self, replica_id, host, port, timeout=2.0):
         # Create or reuse HTTPConnection for replica
@@ -20,7 +31,7 @@ class CheckpointHandler:
             self.connections[replica_id] = HTTPConnection(host, port, timeout=timeout)
         return self.connections[replica_id]
 
-    def send_request(self):
+    def send_request(self, backups):
         now_wall = time.time()
 
         # Skip if not enough time has passed
@@ -31,11 +42,10 @@ class CheckpointHandler:
         self._last_time = now_wall
 
         results = {}
-        primary_id = self.state_manager._primary
+        primary_id = self.curr_replica_id
         wall_ts = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.state_manager._load_replica_file()
 
-        for replica_id, replica_host, replica_port in self.state_manager._backup:
+        for replica_id, replica_host, replica_port in backups:
             try:
                 conn = self._ensure_connection(replica_id, replica_host, replica_port)
 
@@ -44,7 +54,8 @@ class CheckpointHandler:
                     "primary_id": primary_id,
                     "replica_id": replica_id,
                     "timestamp": wall_ts,
-                    "counter": self.state_manager.get(),
+                    "state": self.state_manager.get(),
+                    "checkpoint_count": self.checkpoint_count
                 }
                 body = json.dumps(message_data)
 
@@ -55,7 +66,7 @@ class CheckpointHandler:
                     body=body,
                     headers={"Content-Type": "application/json"},
                 )
-                print(f"\033[94m[{wall_ts}] Sent checkpoint: <{primary_id} -> {replica_id}>\033[0m")
+                print(f"\033[94m[{wall_ts}] Sent checkpoint: <{primary_id} -> {replica_id}>, state is: {self.state_manager.get()}, checkpoint counter is: {self.checkpoint_count}\033[0m")
 
                 # Read and parse response
                 resp = conn.getresponse()
@@ -73,5 +84,8 @@ class CheckpointHandler:
             except Exception as e:
                 results[replica_id] = False
                 print(f"\033[91m[{wall_ts}] {primary_id}: Failed to send checkpoint to {replica_id}: {e}\033[0m")
+                self._drop_connection(replica_id)
+
+        self.checkpoint_count += 1
 
         return results
