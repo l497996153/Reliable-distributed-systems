@@ -10,10 +10,15 @@ class Role(Enum):
     PRIMARY = "primary"
     BACKUP = "backup"
 
+class Configuration(Enum):
+    ACTIVE = 0
+    PASSIVE = 1
+
 # The server injects a StateManager instance via a class attribute.
 class CounterRequestHandler(BaseHTTPRequestHandler):
     state_manager = None
     replica_id = "S1"
+    configuration = Configuration.ACTIVE
     role = Role.PRIMARY
     server_start_time = time.strftime("%Y%m%d_%H:%M:%S")
     # log_file = f"logs/server_{replica_id}_log_{server_start_time}.txt"
@@ -53,6 +58,11 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def check_legal(self):
+        if self.configuration == Configuration.ACTIVE or self.role == Role.PRIMARY:
+            return True
+        return False
+
     # Handle GET
     def do_GET(self):
         parsed_url = urlparse(self.path)
@@ -63,24 +73,26 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
         request_num = int(query.get("request_num", [0])[0])
 
         if path == "/get":
+            if not self.check_legal():
+                return
+            
             value = self.state_manager.get()
             # self.log_message('Sending <reply> for /get with counter=%d', value)
             text = self.log_message('Received <%s, %s, request id: %d, get>', client_id, self.replica_id, request_num)
             text_only_request = re.search(r'<.*?>', text).group(0)
             self.log_message_before_after('state_%s = %d before processing %s', self.replica_id, value, text_only_request)
-            self._send_json(200, {"counter": value, "replica_id": self.replica_id})
+
+            self._send_json(200, {"counter": value, "replica_id": self.replica_id, "primary": self.role==Role.PRIMARY})
+
             self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, value, text_only_request)
-            self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
+
+            self.log_message('Sending <%s, %s, request id: %d, primary: %s, reply>', client_id, self.replica_id, request_num, self.role==Role.PRIMARY)
+
         elif path == "/heartbeat":
             self.log_message("%s receives heartbeat from %s", self.replica_id, lfd_id, color="\033[1;92m")
-            # Comment it since no need to write the before and after according to the document
-            # text_only_request = re.search(r'<.*?>', text).group(0)
-            # Comment it since no need to write the before and after according to the document
-            # self.log_message_before_after('state_%s = %d before processing %s', self.replica_id, value, text_only_request)
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
-            # Comment it since no need to write the before and after according to the document
-            # self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, value, text_only_request)
             self.log_message("%s sends heartbeat to %s", self.replica_id, lfd_id, color="\033[1;92m")
+
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -99,23 +111,31 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
                 print("Cannot get the body")
 
         if self.path == "/increase":
+            if not self.check_legal():
+                return
+            
             text = self.log_message('Received <%s, %s, request id: %d, increase>', client_id, self.replica_id, request_num)
             text_only_request = re.search(r'<.*?>', text).group(0)
             self.log_message_before_after('state_%s = %d before processing %s', self.replica_id, self.state_manager.get(), text_only_request)
             value = self.state_manager.increase()
             self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, self.state_manager.get(), text_only_request)
-            # self.log_message('Sending <reply> for /increase with counter=%d', value)
-            self._send_json(200, {"counter": value, "replica_id": self.replica_id})
-            text = self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
+
+            self._send_json(200, {"counter": value, "replica_id": self.replica_id, "primary": self.role==Role.PRIMARY})
+            text = self.log_message('Sending <%s, %s, request id: %d, primary: %s, reply>', client_id, self.replica_id, request_num, self.role==Role.PRIMARY)
+        
         elif self.path == "/decrease":
+            if not self.check_legal():
+                return
+            
             text = self.log_message('Received <%s, %s, request id: %d, decrease>', client_id, self.replica_id, request_num)
             text_only_request = re.search(r'<.*?>', text).group(0)
             self.log_message_before_after('state_%s = %d before processing %s', self.replica_id, self.state_manager.get(), text_only_request)
             value = self.state_manager.decrease()
             self.log_message_before_after('state_%s = %d after processing %s', self.replica_id, self.state_manager.get(), text_only_request)
-            # self.log_message('Sending <reply> for /decrease with counter=%d', value)
-            self._send_json(200, {"counter": value, "replica_id": self.replica_id})
-            text = self.log_message('Sending <%s, %s, request id: %d, reply>', client_id, self.replica_id, request_num)
+
+            self._send_json(200, {"counter": value, "replica_id": self.replica_id, "primary": self.role==Role.PRIMARY})
+            text = self.log_message('Sending <%s, %s, request id: %d, primary: %s, reply>', client_id, self.replica_id, request_num, self.role==Role.PRIMARY)
+        
         elif self.path == "/send_checkpoint":
             # Primary replica sending checkpoint request to backups
             self.state_manager.set(message_data.get("state", 0))
@@ -123,5 +143,16 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             checkpoint_count = message_data.get("checkpoint_count", 0)
             self.log_message('%s received checkpoint request: my state value is %d, new checkpoint count is: %d', self.replica_id, value, checkpoint_count, color="\033[0;36m")
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
+
+        elif self.path == "/select_primary":
+            CounterRequestHandler.role = Role.PRIMARY
+            self.log_message('%s set to PRIMARY by select_primary request', self.replica_id, color="\033[0;36m")
+            self._send_json(200, {"ok": True, "replica_id": self.replica_id, "role": self.role.value})
+
+        elif self.path == "/select_backup":
+            CounterRequestHandler.role = Role.BACKUP
+            self.log_message('%s set to BACKUP by select_backup request', self.replica_id, color="\033[0;36m")
+            self._send_json(200, {"ok": True, "replica_id": self.replica_id, "role": self.role.value})
+        
         else:
             self._send_json(404, {"error": "not found"})

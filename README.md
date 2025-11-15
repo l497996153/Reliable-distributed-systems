@@ -20,14 +20,24 @@ Implementation of fault-tolerant distributed counter with active/passive replica
 - `--lfd_id`: LFD ID (default: LFD1)
 - `--server_id`: Server ID
 
+
 ### Server
 `python3 src/server/server.py`
 - `--host`: Server Host (default: 0.0.0.0)
 - `--port`: Server Port (default: 8080)
-- `--replica-id`: Replica (default: S1)
+- `--replica-id`: Replica ID (default: S1)
 - `--state-file`: Optional JSON file for persistence (default: None)
-- `--replica-file`: Optional JSON file for replica checks (default: ./replica.json)
 - `--checkpoint-freq`: Send periodic checkpoints (default: 5)
+- `--configuration`: 0: Active  1: Passive (default: 1)
+- `--is-primary`: Whether this server is primary replica (1.primary/0.backup)
+- `--backup1-name`: Backup Replica 1 Name (default: S1)
+- `--backup1-host`: Backup Replica 1 Host (default: 0.0.0.0)
+- `--backup1-port`: Backup Replica 1 Port (default: 8080)
+- `--backup2-name`: Backup Replica 2 Name (default: S1)
+- `--backup2-host`: Backup Replica 2 Host (default: 0.0.0.0)
+- `--backup2-port`: Backup Replica 2 Port (default: 8080)
+
+Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat, POST /select_primary
 
 ### Client
 `python3 src/client/client.py`

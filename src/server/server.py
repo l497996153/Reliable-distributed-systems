@@ -1,6 +1,6 @@
 import argparse
 from http.server import HTTPServer
-from request_handler import CounterRequestHandler, Role
+from request_handler import CounterRequestHandler, Role, Configuration
 from state_manager import StateManager
 from checkpoint_handler import CheckpointHandler
 import time
@@ -21,7 +21,8 @@ def main():
     parser.add_argument("--replica-id", default="S1", help="Replica (default: S1)")
     parser.add_argument("--state-file", default=None, help="Optional JSON file for persistence (default: None)")
     parser.add_argument("--checkpoint-freq", type=int, default=5, help="Send periodic checkpoints (default: 5)")
-    parser.add_argument("--is-primary", type=int, default=1, help="Whether this server is primary replica (true/false)")
+    parser.add_argument("--configuration", type=int, default=1, help="0: Passive 1: Active")
+    parser.add_argument("--is-primary", type=int, default=1, help="Whether this server is primary replica (1.primary/0.backup)")
     parser.add_argument("--backup1-name", default="S1", help="Backup Replica 1 Name")
     parser.add_argument("--backup2-name", default="S1", help="Backup Replica 2 Name")
     parser.add_argument("--backup1-host", default="0.0.0.0", help="Backup Replica 1 Host")
@@ -36,6 +37,11 @@ def main():
     CounterRequestHandler.state_manager = state
     CounterRequestHandler.replica_id = args.replica_id
 
+    if args.configuration == 0:
+        CounterRequestHandler.configuration = Configuration.ACTIVE
+    else:
+        CounterRequestHandler.configuration = Configuration.PASSIVE
+
     if args.is_primary == 1:
         role = Role.PRIMARY
     else:
@@ -49,7 +55,8 @@ def main():
     print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Listening on http://{args.host}:{args.port} as {args.replica_id}\033[0m")
     print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] Endpoints: POST /increase, POST /decrease, GET /get, GET /heartbeat\033[0m")
 
-    if role == Role.BACKUP:
+    # Use the handler's role attribute so role changes can happen at runtime
+    if CounterRequestHandler.role == Role.BACKUP:
         print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] This replica now is a backup server \033[0m")
     else:
         print(f"\033[94m[{time.strftime('%Y-%m-%d %H:%M:%S')}] This replica now is a primary server \033[0m")
@@ -57,10 +64,8 @@ def main():
     try:
         # Writeup said that the checkpoint_count is 1 at first.
         while True: 
-            # Send checkpoint request to other backups
-            if role == Role.PRIMARY:
+            if CounterRequestHandler.role == Role.PRIMARY:
                 checkpoint_handler.send_request([[args.backup1_name, args.backup1_host, args.backup1_port], [args.backup2_name, args.backup2_host, args.backup2_port]])
-                # Writeup said that the checkpoint_count will be increased after sending the checkpoint request.
             server.handle_request()
     except KeyboardInterrupt:
         # clear_json(args.replica_file)
