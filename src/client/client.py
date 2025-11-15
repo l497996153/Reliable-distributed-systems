@@ -29,39 +29,73 @@ class Client:
         with open(self.log_file, "a") as f:
             f.write(text + "\n")
 
-    def connect_to_servers(self):
-        for replica_id, address in self.server_addresses.items():
-            try:
-                self.connections[replica_id] = HTTPConnection(address)
-                self.log(f"[{self._timestamp()}] {self.client_id}: Connected to server {replica_id} at {address}")
-            except Exception as e:
-                self.log(f"[{self._timestamp()}] {self.client_id}: Connection to {replica_id} failed: {e}")
+    def _ensure_primary_connection(self):
+        """Ensure there is a live connection to the current primary.
 
-        connected = "S1"
-        '''for replica_id in list(self.connections.keys()):
+        Returns True if the connection looks usable after at most one
+        reconnection attempt, otherwise False.
+        """
+        if not self.primary:
+            return False
+
+        # If we don't have a connection object, try to create one.
+        if self.primary not in self.connections:
             try:
-                conn = self.connections[replica_id]
-                conn.request("GET", f"/get?client_id={self.client_id}&request_num={self.request_num}")
-                resp = conn.getresponse()
-                raw = resp.read().decode()
-                if resp.status == 200 and raw:
-                    try:
-                        data = json.loads(raw)
-                        if data.get("primary") is True:
-                            connected = replica_id
-                            self.log(f"[{self._timestamp()}] {self.client_id}: Primary discovered by probe: {discovered}")
-                            break
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-        '''
-        # Default to S1
-        if connected in self.connections:
-            self.primary = connected
-            self.log(f"[{self._timestamp()}] {self.client_id}: Primary is {self.primary}")
-        else:
-            self.log(f"[{self._timestamp()}] {self.client_id}: No primary server connections available")
+                self.connections[self.primary] = HTTPConnection(self.server_addresses[self.primary])
+            except Exception as e:
+                self.log(f"[{self._timestamp()}] {self.client_id}: Cannot connect to primary {self.primary}: {e}")
+                return False
+
+        conn = self.connections[self.primary]
+        # Check if the socket is still usable.
+        try:
+            conn.request("HEAD", "/health")
+            _ = conn.getresponse()
+            return True
+        except Exception:
+            # try to rebuild the connection once.
+            try:
+                self.connections[self.primary] = HTTPConnection(self.server_addresses[self.primary])
+                conn = self.connections[self.primary]
+                conn.request("HEAD", "/health")
+                _ = conn.getresponse()
+                self.log(f"[{self._timestamp()}] {self.client_id}: Reconnected to primary {self.primary}")
+                return True
+            except Exception as e:
+                self.log(f"[{self._timestamp()}] {self.client_id}: Primary {self.primary} connection failed after retry: {e}")
+                return False
+
+    def connect_to_servers(self):
+        connected = ""
+        while connected == "":
+            for replica_id, address in self.server_addresses.items():
+                try:
+                    self.connections[replica_id] = HTTPConnection(address)
+                    self.log(f"[{self._timestamp()}] {self.client_id}: Connected to server {replica_id} at {address}")
+                except Exception as e:
+                    self.log(f"[{self._timestamp()}] {self.client_id}: Connection to {replica_id} failed: {e}")
+
+            for replica_id in list(self.connections.keys()):
+                try:
+                    conn = self.connections[replica_id]
+                    conn.request("GET", f"/get?client_id={self.client_id}&request_num={self.request_num}")
+                    resp = conn.getresponse()
+                    raw = resp.read().decode()
+                    if resp.status == 200 and raw:
+                        try:
+                            data = json.loads(raw)
+                            if data.get("primary") is True:
+                                connected = replica_id
+                                break
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            if connected in self.connections:
+                self.primary = connected
+                self.log(f"[{self._timestamp()}] {self.client_id}: Primary is {self.primary}")
+            else:
+                self.log(f"[{self._timestamp()}] {self.client_id}: No primary server connections available")
 
     def send_request(self, action):
         # Check connections
@@ -84,6 +118,15 @@ class Client:
         if not self.primary:
             self.log(f"[{self._timestamp()}] {self.client_id}: Primary not found")
             return False
+
+        # Ensure the primary connection is alive; if not, try rediscovery.
+        if not self._ensure_primary_connection():
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary connection dead; rediscovering primary")
+            self.primary = None
+            self.connect_to_servers()
+            if not self.primary or not self._ensure_primary_connection():
+                self.log(f"[{self._timestamp()}] {self.client_id}: Unable to establish connection to any primary")
+                return False
 
         # send request only to primary
         if self.primary not in self.connections:
@@ -160,12 +203,13 @@ class Client:
             self.log(f"[{self._timestamp()}] {self.client_id}: Primary not known")
             return False
 
-        # Request counter only from primary
-        if self.primary not in self.connections:
-            try:
-                self.connections[self.primary] = HTTPConnection(self.server_addresses[self.primary])
-            except Exception as e:
-                self.log(f"[{self._timestamp()}] {self.client_id}: Cannot connect to primary {self.primary}: {e}")
+        # Ensure the primary connection is alive; if not, try rediscovery.
+        if not self._ensure_primary_connection():
+            self.log(f"[{self._timestamp()}] {self.client_id}: Primary connection dead; rediscovering primary for get")
+            self.primary = None
+            self.connect_to_servers()
+            if not self.primary or not self._ensure_primary_connection():
+                self.log(f"[{self._timestamp()}] {self.client_id}: Unable to establish connection to any primary for get")
                 return False
 
         data = self._get_from_replica(self.primary, self.request_num)
