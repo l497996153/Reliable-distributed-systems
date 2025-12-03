@@ -15,7 +15,8 @@ id = config['id_LFD_1']
 lfd_id = config['lfd_id_1']
 server_id= config['server_id_1']
 HOST = config["lfd_server_host_1"]
-PORT = config["lfd_server_port_1"]
+PORT = config["local_lfd_port_1"]
+server_port = config["lfd_server_port_1"]
 GFD_HOST = config["lfd_gfd_host_1"]
 GFD_PORT = config["lfd_gfd_port_1"]
 freq = config["lfd_freq_1"]
@@ -25,7 +26,7 @@ file_path = os.path.join(os.path.dirname(__file__), "..", "src", "lfd", "heartbe
 
 try:
 
-    subprocess.run([sys.executable, file_path, "--lfd_id", lfd_id, "--server_id", server_id, "--host", HOST, "--port", str(PORT), "--gfd_host", str(GFD_HOST), "--gfd_port",  str(GFD_PORT),"--freq", str(freq), "--timeout", str(timeout)])
+    subprocess.run([sys.executable, file_path, "--lfd_id", lfd_id, "--server_id", server_id, "--host", HOST, "--port", str(PORT), "--server_port", str(server_port), "--gfd_host", str(GFD_HOST), "--gfd_port",  str(GFD_PORT),"--freq", str(freq), "--timeout", str(timeout)])
 
 except KeyboardInterrupt:
 

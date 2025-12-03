@@ -111,14 +111,38 @@ def lfd1():
 
 # -------------------- Recovery --------------------
 def recover_server_locally(server_id):
-    server_index = server_id[-1]
-    script_path = os.path.join(os.path.dirname(__file__), "..", "..", "milestone_demos", f"script_server_{server_index}.py")
-    # script_path = os.path.join(os.path.dirname(__file__), "..", "..", "src", "server", "server.py")
 
-    if platform.system() == "Windows":
+    server_index = server_id[-1]
+    script_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "milestone_demos",
+        f"script_server_{server_index}.py"
+    )
+
+    system = platform.system()
+
+    if system == "Windows":
+
         subprocess.Popen(["cmd", "/c", "start", "python", script_path])
+
+    elif system == "Darwin":  # macOS
+        print("mac os detected")
+        command = f'python {script_path}'
+        apple_script = f'''
+        tell application "Terminal"
+            activate
+            do script "{command}"
+        end tell
+        '''
+        subprocess.Popen(["osascript", "-e", apple_script])
+
+    elif system == "Linux":
+        subprocess.Popen([
+            "gnome-terminal", "--", "python3", script_path
+        ])
+
     else:
-        subprocess.Popen(["gnome-terminal", "--", "python3", script_path])
+        print(f"[ERROR] Unsupported OS: {system}")
 
 class LFDHandler(BaseHTTPRequestHandler):
     def do_POST(self):

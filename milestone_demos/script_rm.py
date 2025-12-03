@@ -20,6 +20,8 @@ rm_s2_host = config["rm_s2_host"]
 rm_s2_port = config["rm_s2_port"]
 rm_s3_host = config["rm_s3_host"]
 rm_s3_port = config["rm_s3_port"]
+rm_gfd_host = config["rm_gfd_host"]
+rm_gfd_port = config["rm_gfd_port"]
 
 
 file_path = os.path.join(os.path.dirname(__file__), "..", "src", "rm", "rm.py")
@@ -37,7 +39,9 @@ try:
         "--s2_host", rm_s2_host,
         "--s2_port", str(rm_s2_port),
         "--s3_host", rm_s3_host,
-        "--s3_port", str(rm_s3_port)
+        "--s3_port", str(rm_s3_port),
+        "--gfd_host", rm_gfd_host,          
+        "--gfd_port", str(rm_gfd_port)     
     ])
 
 except KeyboardInterrupt:
