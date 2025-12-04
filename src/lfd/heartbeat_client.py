@@ -8,6 +8,7 @@ import sys
 import platform
 import json
 import threading
+import multiprocessing
 
 # -------------------- Global Variables --------------------
 lfd_id = None
@@ -20,6 +21,47 @@ gfd_port = None
 heartbeat_freq = None
 timeout = None
 log_file = None
+
+delay_config = {
+    "lfd_delay": 1000,
+    "server_delay": 1000,
+}
+delay_lock = threading.Lock()
+
+# ------------------- CPU Burn 进程管理 -------------------
+burn_processes = []
+
+def cpu_burner():
+    """ 占满一个 CPU 核心的进程 """
+    print(f"CPU burner process {os.getpid()} started")
+    while True:
+        pass
+
+def start_cpu_burn():
+    """ 启动所有 CPU burn 进程 """
+    global burn_processes
+    if burn_processes:
+        print("CPU burn already running.")
+        return
+
+    num_cores = os.cpu_count()
+    print(f"Starting {num_cores} CPU burners...")
+    
+    for _ in range(num_cores):
+        p = multiprocessing.Process(target=cpu_burner)
+        p.start()
+        burn_processes.append(p)
+
+def stop_cpu_burn():
+    """ 停止全部 CPU burn 进程 """
+    global burn_processes
+    print("Stopping all CPU burners...")
+    for p in burn_processes:
+        p.terminate()
+        p.join()
+    burn_processes = []
+    print("CPU burn stopped.")
+
 
 # -------------------- Utils --------------------
 def log(text):
@@ -109,6 +151,11 @@ def lfd1():
         elapsed = time.time() - start_time
         time.sleep(max(0, heartbeat_freq - elapsed))
 
+        with delay_lock:
+            lfd_delay = delay_config.get("lfd_delay", 0)
+        if lfd_delay > 0:
+            time.sleep(lfd_delay)
+
 # -------------------- Recovery --------------------
 def recover_server_locally(server_id):
 
@@ -160,6 +207,36 @@ class LFDHandler(BaseHTTPRequestHandler):
             log(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] LFD: Recovery action executed for {server_id_req}")
             return
 
+
+def run_server():
+    global host, port
+    server = HTTPServer((host, 9000), LFDHandler)
+    server.serve_forever()
+
+def input_thread():
+    while True:
+        cmd = input().strip()
+
+        with delay_lock:
+            if cmd == "slow":
+                delay_config["lfd_delay"] = 2
+                delay_config["server_delay"] = 2
+                print(">> Delays set to 2 seconds")
+
+            elif cmd == "burn":
+                delay_config["lfd_delay"] = 1000
+                delay_config["server_delay"] = 1000
+                start_cpu_burn()
+
+            elif cmd == "normal":
+                delay_config["lfd_delay"] = 0
+                delay_config["server_delay"] = 0
+                stop_cpu_burn()
+                print(">> All delays cleared and CPU burn stopped")
+
+            else:
+                print("Commands: slow | burn | normal")
+
 # -------------------- Main --------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LFD Heartbeat Client with GFD reporting")
@@ -192,10 +269,15 @@ if __name__ == "__main__":
 
     # 启动 heartbeat 线程
     threading.Thread(target=lfd1, daemon=True).start()
+    threading.Thread(target=run_server, daemon=True).start()
 
     # 启动 HTTP 服务器处理 /recover
-    server = HTTPServer((host, port), LFDHandler)
+    # server = HTTPServer((host, port), LFDHandler)
+    # try:
+    #     server.serve_forever()
+    # except KeyboardInterrupt:
+    #     print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id} terminated by user.\033[0m")
     try:
-        server.serve_forever()
+        input_thread()
     except KeyboardInterrupt:
         print(f"\n\033[91m[{time.strftime('%Y-%m-%d %H:%M:%S')}] {lfd_id} terminated by user.\033[0m")
