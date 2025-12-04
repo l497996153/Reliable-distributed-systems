@@ -23,8 +23,8 @@ timeout = None
 log_file = None
 
 delay_config = {
-    "lfd_delay": 1000,
-    "server_delay": 1000,
+    "lfd_delay": 0,
+    "server_delay": 0,
 }
 delay_lock = threading.Lock()
 
