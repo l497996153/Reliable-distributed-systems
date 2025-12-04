@@ -150,7 +150,7 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             else:
                 CounterRequestHandler.checkpoint_count = message_data.get("checkpoint_count", 0)
             
-            self.log_message('%s received checkpoint request from %s: my state value is %d, new checkpoint count is: %d', message_data.get("primary_id", ""), self.replica_id, value, CounterRequestHandler.checkpoint_count, color="\033[0;36m")
+            self.log_message('%s received checkpoint request from %s: my state value is %d, new checkpoint count is: %d', self.replica_id, message_data.get("primary_id", ""), value, CounterRequestHandler.checkpoint_count, color="\033[0;36m")
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
 
             # Mark the server as ready (class attribute) so other handler
