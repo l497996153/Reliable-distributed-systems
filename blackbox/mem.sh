@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Output CSV header
-echo "time_sec,used_mb,free_mb" > memory_data.csv
+echo "time_sec,used_mb,free_mb" > mem_usage.csv
 
 # Record the starting time
 start=$(date +%s)
