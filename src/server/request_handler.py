@@ -139,9 +139,6 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             text = self.log_message('Sending <%s, %s, request id: %d, primary: %s, reply>', client_id, self.replica_id, request_num, self.role==Role.PRIMARY)
         
         elif self.path == "/send_checkpoint":
-            # Primary replica sending checkpoint request to backups
-            value = self.state_manager.get()
-
             if CounterRequestHandler.role == Role.PRIMARY:
                 new_checkpoint = message_data.get("checkpoint_count", 0)
                 if CounterRequestHandler.checkpoint_count < new_checkpoint:
@@ -150,6 +147,8 @@ class CounterRequestHandler(BaseHTTPRequestHandler):
             else:
                 self.state_manager.set(message_data.get("state", 0))
                 CounterRequestHandler.checkpoint_count = message_data.get("checkpoint_count", 0)
+            
+            value = self.state_manager.get()
             
             self.log_message('%s received checkpoint request from %s: my state value is %d, new checkpoint count is: %d', self.replica_id, message_data.get("primary_id", ""), value, CounterRequestHandler.checkpoint_count, color="\033[0;36m")
             self._send_json(200, {"ok": True, "replica_id": self.replica_id})
