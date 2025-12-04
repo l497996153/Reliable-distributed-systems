@@ -10,7 +10,7 @@
     "rm_name" : "RM",
     "rm_host" : "0.0.0.0", 
     "rm_port" : 8090,
-    "rm_configuration" : 1,
+    "rm_configuration" : 0,
     "rm_s1_host": "0.0.0.0",
     "rm_s1_port": 8080,
     "rm_s2_host": "0.0.0.0",
