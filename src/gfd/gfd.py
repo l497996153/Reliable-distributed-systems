@@ -65,7 +65,8 @@ def report_membership_rm(timeout=5):
     try:
         requests.post(rm_membership_url, json=payload, timeout=timeout)
     except requests.exceptions.RequestException as e:
-        log(f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Failed to report status to RM: {e}\033[0m")
+        #log(f"\033[33m[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARN: Failed to report status to RM: {e}\033[0m")
+        pass
 ####### end #######
 
 # -------------------- Membership maintenance --------------------
@@ -218,7 +219,7 @@ class GFDHandler(BaseHTTPRequestHandler):
                 lfd_host = lfd_info.get("lfd_host")  # 你可能需要在注册时存 host/port
                 lfd_port = lfd_info.get("lfd_port")
                 try:
-                    requests.post(f"http://{lfd_host}:{lfd_port}/recover", json={"server_id": server_id}, timeout=5)
+                    requests.post(f"http://{lfd_host}:{lfd_port}/recover", json={"server_id": server_id}, timeout=50)
                     log(f"[{_timestamp()}] GFD: Sent recovery request to {lfd_id} for {server_id}")
                 except requests.exceptions.RequestException as e:
                     log(f"[{_timestamp()}] WARN: Failed to notify {lfd_id} for recovery: {e}")

@@ -65,7 +65,7 @@ def request_recovery_from_gfd(server_id):
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
     try:
-        r = requests.post(gfd_url, json=payload, timeout=5)
+        r = requests.post(gfd_url, json=payload, timeout=50)
         if r.status_code == 200:
             log(f"[{_timestamp()}] RM: Recovery request sent for {server_id}")
         else:
@@ -146,6 +146,8 @@ class RMHandler(BaseHTTPRequestHandler):
         path = self.path
 
         if path == "/membership":
+
+            print("check_problem")
 
             received_membership = body_data.get("membership", [])
 
